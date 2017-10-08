@@ -11,7 +11,7 @@ f = os.popen('ifconfig eth0 | grep "inet\ addr" | cut -d: -f2 | cut -d" " -f1')
 host = f.read().strip()
 f.close()
 
-print('Hostname: ',host)
+print('Hostname: ' + host)
 address = (host, 9999)
 sock.connect(address)
 

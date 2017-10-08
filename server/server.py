@@ -55,10 +55,13 @@ class ServerMain:
 		while not ABORT_TEST:
 			time.sleep(1)
 			print("Checking connection...")
-			try:
-				self.client.send("Test")
-			except Exception as e:
-				setAbort("Ethernet connection broken: " + str(e))
+			
+			# get eth0 status
+			f = os.popen('cat /sys/class/net/eth0/carrier')
+			eth0_active = int(f.read())
+			f.close()
+			if not eth0_active:
+				setAbort("Ethernet connection broken")
 		self.client.close()
 			
 	# use this function to start the motor-controller test sequence - either directly or after parsing the initial client message
@@ -94,8 +97,8 @@ def serverStart():
 	test = ServerMain()
 	test.initServer()
 
-#serverStart()
-#while not ABORT_TEST:
-#	time.sleep(1)
-#	print("Looping main...")
-#print("Main terminated")
+serverStart()
+while not ABORT_TEST:
+	time.sleep(1)
+	print("Looping main...")
+print("Main terminated")
