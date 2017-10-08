@@ -1,0 +1,4 @@
+# List of all planned init parameters
+# Rev 0.1
+
+MotorController.init_test(INT launch_code, FLOAT burn_duration, FLOAT ignitor timing, FLOAT valve_open_timing, FLOAT valve_closing_time, FLOAT limit_switch_slowdown_speed, FLOAT angle_limit_switch_slowdown_mode, FLOAT opening_profile_angle_delimiter, FLOAT total_opening_time, FLOAT initial_opening_time)
