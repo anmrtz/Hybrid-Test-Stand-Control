@@ -31,72 +31,72 @@ class App(QMainWindow):
         self.ip_box.setPlaceholderText("IP address")
 
         #Launch code
-        self.l_code_box = QLineEdit(self)
-        self.l_code_box.move(80, 80)
-        self.l_code_box.resize(230,30)
-        self.l_code_box.setPlaceholderText("Launch code")
+        self.launch_code_box = QLineEdit(self)
+        self.launch_code_box.move(80, 80)
+        self.launch_code_box.resize(230,30)
+        self.launch_code_box.setPlaceholderText("Launch code")
 
         #Burn duration
-        self.b_drtn_box = QLineEdit(self)
-        self.b_drtn_box.move(80, 140)
-        self.b_drtn_box.resize(230,30)
-        self.b_drtn_box.setPlaceholderText("Burn duration")
+        self.burn_duration_box = QLineEdit(self)
+        self.burn_duration_box.move(80, 140)
+        self.burn_duration_box.resize(230,30)
+        self.burn_duration_box.setPlaceholderText("Burn duration")
 
         #Ignitor timing
-        self.ignt_time_box = QLineEdit(self)
-        self.ignt_time_box.move(80, 200)
-        self.ignt_time_box.resize(230,30)
-        self.ignt_time_box.setPlaceholderText("Ignitor timing")
+        self.ignitor_timing_box = QLineEdit(self)
+        self.ignitor_timing_box.move(80, 200)
+        self.ignitor_timing_box.resize(230,30)
+        self.ignitor_timing_box.setPlaceholderText("Ignitor timing")
 
         #Valve open timing
-        self.vlv_opn_time_box = QLineEdit(self)
-        self.vlv_opn_time_box.move(80, 260)
-        self.vlv_opn_time_box.resize(230,30)
-        self.vlv_opn_time_box.setPlaceholderText("Valve open timing")
+        self.valve_open_timing_box = QLineEdit(self)
+        self.valve_open_timing_box.move(80, 260)
+        self.valve_open_timing_box.resize(230,30)
+        self.valve_open_timing_box.setPlaceholderText("Valve open timing")
 
         #Valve closing time
-        self.vlv_cls_time_box = QLineEdit(self)
-        self.vlv_cls_time_box.move(80, 320)
-        self.vlv_cls_time_box.resize(230,30)
-        self.vlv_cls_time_box.setPlaceholderText("Valve closing time")
+        self.valve_closing_time_box = QLineEdit(self)
+        self.valve_closing_time_box.move(80, 320)
+        self.valve_closing_time_box.resize(230,30)
+        self.valve_closing_time_box.setPlaceholderText("Valve closing time")
 
         #Limit switch slowdown mode speed
-        self.switch_slow_box = QLineEdit(self)
-        self.switch_slow_box.move(80, 380)
-        self.switch_slow_box.resize(230,30)
-        self.switch_slow_box.setPlaceholderText("Limit switch slowdown mode speed")
+        self.limit_switch_slowdown_box = QLineEdit(self)
+        self.limit_switch_slowdown_box.move(80, 380)
+        self.limit_switch_slowdown_box.resize(230,30)
+        self.limit_switch_slowdown_box.setPlaceholderText("Limit switch slowdown speed")
 
         #Angle limit switch slowdown
-        self.switch_angle_box = QLineEdit(self)
-        self.switch_angle_box.move(80, 440)
-        self.switch_angle_box.resize(230,30)
-        self.switch_angle_box.setPlaceholderText("Angle limit switch slowdown")
+        self.angle_limit_switch_slowdown_box = QLineEdit(self)
+        self.angle_limit_switch_slowdown_box.move(80, 440)
+        self.angle_limit_switch_slowdown_box.resize(230,30)
+        self.angle_limit_switch_slowdown_box.setPlaceholderText("Angle limit switch slowdown")
 
         #Opening profile angle
-        self.prof_ang_box = QLineEdit(self)
-        self.prof_ang_box.move(80, 500)
-        self.prof_ang_box.resize(230,30)
-        self.prof_ang_box.setPlaceholderText("Opening profile angle")
+        self.opening_profile_angle_delimiter_box = QLineEdit(self)
+        self.opening_profile_angle_delimiter_box.move(80, 500)
+        self.opening_profile_angle_delimiter_box.resize(230,30)
+        self.opening_profile_angle_delimiter_box.setPlaceholderText("Opening profile angle delimiter")
 
         #Total opening time
-        self.opn_time_box = QLineEdit(self)
-        self.opn_time_box.move(80, 560)
-        self.opn_time_box.resize(230,30)
-        self.opn_time_box.setPlaceholderText("Total opening time")
+        self.total_opening_time_box = QLineEdit(self)
+        self.total_opening_time_box.move(80, 560)
+        self.total_opening_time_box.resize(230,30)
+        self.total_opening_time_box.setPlaceholderText("Total opening time")
 
         #Initial opening time
-        self.init_time_box = QLineEdit(self)
-        self.init_time_box.move(80, 620)
-        self.init_time_box.resize(230,30)
-        self.init_time_box.setPlaceholderText("Initial opening time")
+        self.initial_opening_time_box = QLineEdit(self)
+        self.initial_opening_time_box.move(80, 620)
+        self.initial_opening_time_box.resize(230,30)
+        self.initial_opening_time_box.setPlaceholderText("Initial opening time")
 
         #Raspberry Status
         self.status_box = QPlainTextEdit(self);
-        self.status_box.move(80,790);
-        self.status_box.resize(230,80);
-        self.status_box.setPlaceholderText("Message from the raspberry pi")
+        self.status_box.move(80,770);
+        self.status_box.resize(230,100);
+        self.status_box.setPlainText("Awaiting the message from the raspberry pi")
         self.status_box.setDisabled(True)
-
+        
 
     
 
@@ -107,7 +107,7 @@ class App(QMainWindow):
         self.connect = QPushButton('Connect', self)
         self.connect.setToolTip('You can only submit after the connection has been successfully established')
         self.connect.resize(80,40)
-        self.connect.move(100, 730)
+        self.connect.move(100, 700)
         self.connect.clicked.connect(self.set_connection)
 
 
@@ -115,19 +115,39 @@ class App(QMainWindow):
         self.submit = QPushButton('Submit', self)
         self.submit.setToolTip('You can only submit after the connection has been successfully established')
         self.submit.resize(80,40)
-        self.submit.move(200, 730)
-
+        self.submit.move(200, 700)
+        self.submit.clicked.connect(self.submit_data)
+        #self.submit.clicked.connect(self.set_connection)
+        
 
     #in this part of the code we need to connect using sockets
     def set_connection(self):
+        #establishing the socket connection
         self.sock = socket.socket()
-        self.sock.connect(('localhost', 9999))
+        self.sock.connect((self.ip_box.text(), 9999))              
         self.conn_data = self.sock.recv(1024)
-        self.sock.close()
-
+        
+        #Collecting all of the variables from the textboxes
+        self.launch_code = self.launch_code_box.text()
+        self.burn_duration = self.burn_duration_box.text()
+        self.ignitor_timing = self.ignitor_timing_box.text()
+        self.valve_open_timing = self.valve_open_timing_box.text()
+        self.valve_closing_time = self.valve_closing_time_box.text()
+        self.limit_switch_slowdown = self.limit_switch_slowdown_box.text()
+        self.angle_limit_switch_slowdown = self.angle_limit_switch_slowdown_box.text()
+        self.opening_profile_angle_delimiter = self.opening_profile_angle_delimiter_box.text()
+        self.total_opening_time = self.total_opening_time_box.text()
+        self.initial_opening_time = self.initial_opening_time_box.text()
+        
+        self.engine_data = self.launch_code + " " + self.burn_duration + " " + self.ignitor_timing + " " + self.valve_open_timing + " " + self.valve_closing_time + " " + self.limit_switch_slowdown + " " + self.opening_profile_angle_delimiter + " " + self.total_opening_time + " " + self.initial_opening_time
+        
+        
         if(self.conn_data):
-            print("connected")
+            self.status_box.setPlainText("CONNECTION IS ESTABLISHED! Here is the data that your are about to send: " + self.engine_data + " Click submit if the data is correct")
 
+    #submit data to the  server
+    def submit_data(self):
+        self.sock.sendall(self.engine_data.encode())
 
     #this method is responsible for basic window parameters
     def window(self):
