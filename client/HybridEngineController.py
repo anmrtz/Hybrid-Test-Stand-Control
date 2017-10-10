@@ -29,67 +29,90 @@ class App(QMainWindow):
         self.ip_box.move(80, 20)
         self.ip_box.resize(230,30)
         self.ip_box.setPlaceholderText("IP address")
-
+        
         #Launch code
         self.launch_code_box = QLineEdit(self)
         self.launch_code_box.move(80, 80)
         self.launch_code_box.resize(230,30)
         self.launch_code_box.setPlaceholderText("Launch code")
+        #----only integers are allowed
+        int_validator = QtGui.QIntValidator()
+        self.launch_code_box.setValidator(int_validator)
 
         #Burn duration
         self.burn_duration_box = QLineEdit(self)
         self.burn_duration_box.move(80, 140)
         self.burn_duration_box.resize(230,30)
         self.burn_duration_box.setPlaceholderText("Burn duration")
-
+        #----only doubles are allowed
+        double_validator = QtGui.QDoubleValidator()
+        self.burn_duration_box.setValidator(double_validator)
+        
         #Ignitor timing
         self.ignitor_timing_box = QLineEdit(self)
         self.ignitor_timing_box.move(80, 200)
         self.ignitor_timing_box.resize(230,30)
         self.ignitor_timing_box.setPlaceholderText("Ignitor timing")
-
+        #----only doubles are allowed
+        self.ignitor_timing_box.setValidator(double_validator)
+        
+        
         #Valve open timing
         self.valve_open_timing_box = QLineEdit(self)
         self.valve_open_timing_box.move(80, 260)
         self.valve_open_timing_box.resize(230,30)
         self.valve_open_timing_box.setPlaceholderText("Valve open timing")
-
+        #----only doubles are allowed
+        self.valve_open_timing_box.setValidator(double_validator)
+        
         #Valve closing time
         self.valve_closing_time_box = QLineEdit(self)
         self.valve_closing_time_box.move(80, 320)
         self.valve_closing_time_box.resize(230,30)
         self.valve_closing_time_box.setPlaceholderText("Valve closing time")
+        #----only doubles are allowed
+        self.valve_closing_time_box.setValidator(double_validator)
 
         #Limit switch slowdown mode speed
         self.limit_switch_slowdown_box = QLineEdit(self)
         self.limit_switch_slowdown_box.move(80, 380)
         self.limit_switch_slowdown_box.resize(230,30)
         self.limit_switch_slowdown_box.setPlaceholderText("Limit switch slowdown speed")
+        #----only doubles are allowed
+        self.limit_switch_slowdown_box.setValidator(double_validator)
 
         #Angle limit switch slowdown
         self.angle_limit_switch_slowdown_box = QLineEdit(self)
         self.angle_limit_switch_slowdown_box.move(80, 440)
         self.angle_limit_switch_slowdown_box.resize(230,30)
         self.angle_limit_switch_slowdown_box.setPlaceholderText("Angle limit switch slowdown")
+        #----only doubles are allowed
+        self.angle_limit_switch_slowdown_box.setValidator(double_validator)
 
         #Opening profile angle
         self.opening_profile_angle_delimiter_box = QLineEdit(self)
         self.opening_profile_angle_delimiter_box.move(80, 500)
         self.opening_profile_angle_delimiter_box.resize(230,30)
         self.opening_profile_angle_delimiter_box.setPlaceholderText("Opening profile angle delimiter")
-
+        #----only doubles are allowed
+        self.opening_profile_angle_delimiter_box.setValidator(double_validator)
+        
         #Total opening time
         self.total_opening_time_box = QLineEdit(self)
         self.total_opening_time_box.move(80, 560)
         self.total_opening_time_box.resize(230,30)
         self.total_opening_time_box.setPlaceholderText("Total opening time")
+        #----only doubles are allowed
+        self.total_opening_time_box.setValidator(double_validator)
 
         #Initial opening time
         self.initial_opening_time_box = QLineEdit(self)
         self.initial_opening_time_box.move(80, 620)
         self.initial_opening_time_box.resize(230,30)
         self.initial_opening_time_box.setPlaceholderText("Initial opening time")
-
+        #----only doubles are allowed
+        self.initial_opening_time_box.setValidator(double_validator)
+        
         #Raspberry Status
         self.status_box = QPlainTextEdit(self);
         self.status_box.move(80,770);
