@@ -1,21 +1,30 @@
-# quick server connection test. attempts to connect to local host 
+# quick server connection test
 
 import socket
 import time
+import sys
 import os
 
 sock = socket.socket()
 
-# eth0 IP
-f = os.popen('ifconfig eth0 | grep "inet\ addr" | cut -d: -f2 | cut -d" " -f1')
-host = f.read().strip()
-f.close()
+if len(sys.argv) > 1:
+	host = sys.argv[1]
+else:
+	# eth0 IP
+	f = os.popen('ip addr show eth0')
+	host = f.read().split("inet ")[1].split("/")[0]
+	f.close()
 
-print('Hostname: ' + host)
+print('Connecting to: ' + host)
 address = (host, 9999)
-sock.connect(address)
 
-sock.send('Hello from client')
+try:
+	sock.connect(address)
+	sock.send('Hello from client')
+except Exception as e:
+	print(e)
+	sys.exit()
+
 #data = sock.recv(1024)
 time.sleep(10)
 sock.close()
