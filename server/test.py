@@ -126,3 +126,8 @@ if len(sys.argv) > 1:
 	terminalStart()
 else:
 	serverStart()
+
+# keep main thread alive until end of test
+while not END_TEST:
+	time.sleep(1)
+print("Main thread ended")
