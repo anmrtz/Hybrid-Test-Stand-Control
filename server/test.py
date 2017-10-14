@@ -19,16 +19,17 @@ def endTest(msg = "NO_ABORT_MSG"):
 
 class TestMain:
 	def __init__(self):	
-		signal.signal(signal.SIGINT, self.handleKeyboardInt)
+		pass
 
 	def initServer(self):
 		self.sock = socket.socket()
-		
+		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
 		# get eth0 IP in Linux
 		try:
 			f = os.popen('ip addr show eth0')
-        	        host = f.read().split("inet ")[1].split("/")[0]
-                	f.close()
+			host = f.read().split("inet ")[1].split("/")[0]
+			f.close()
 		except Exception as e:
 			endTest(e)
 			return
@@ -45,14 +46,19 @@ class TestMain:
 		# wait for a new connection
 		try:
 			self.client, addr = self.sock.accept()	
+			# the recieved message is stored in data
+			data = self.client.recv(1024)	
+			data = data.decode('utf-8')
 		except Exception as e:
 			endTest(e)
-			return
-			
-		# the recieved message is stored in data
-		data = self.client.recv(1024)
-		print("Recieved: " + data)
+			return	
+		except KeyboardInterrupt:
+			endTest("Keyboard interrupt")
+			return	
 
+		print("Recieved: " + data)
+		
+		signal.signal(signal.SIGINT, self.handleKeyboardInt)
 		# spawn a new thread to periodically check the connection with the new client
 		thr = threading.Thread(target = self.checkConnection, args = ())
 		
@@ -60,12 +66,17 @@ class TestMain:
 		thr.start()
 
 		# slice param string as needed and start test
+		params = data.split(' ')
+		if params[0] != "HEAD":
+			endTest("Invalid parameter header")
+			return
+		self.startTest(params[1:])
 
 	# periodically check for broken ethernet connection
 	def checkConnection(self):
 		while not END_TEST:
 			time.sleep(0.5)
-			print("Checking connection...")
+			#print("Checking connection...")
 			try:
 				# get eth0 status
 				f = os.popen('cat /sys/class/net/eth0/carrier')
@@ -99,9 +110,18 @@ class TestMain:
 			endTest(e)
 			return
 
-		print("Starting test...")
-		#verify launch code		
+		print("Parameters recieved. Verifying launch code...")
+		#verify launch code
+		#if launch_code != :
+			#endTest("Incorrect launch code")
+			#return
+	
 		#verify input type/ranges then start the test
+		print("Launch code accepted. Verifying parameters...")
+		
+		print("Parameters accepted. Starting test...")
+
+		#!!!Alex invoke your function here!!!
 
 		#successful end of test
 		endTest("End of TestMain")
@@ -129,5 +149,5 @@ else:
 
 # keep main thread alive until end of test
 while not END_TEST:
-	time.sleep(1)
+	time.sleep(0.2)
 print("Main thread ended")
