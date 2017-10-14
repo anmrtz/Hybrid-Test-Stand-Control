@@ -23,7 +23,6 @@ class App(QMainWindow):
         self.buttons()
         self.window()
         self.sock = socket.socket()
-        self.closeEvent = self.closeEventCallback
 
     def textboxes(self):
 
@@ -32,7 +31,7 @@ class App(QMainWindow):
         self.ip_box.move(130, 20)
         self.ip_box.resize(230,30)
         self.ip_box.setPlaceholderText("IP address")
-        self.ip_box.setText("localhost")
+        self.ip_box.setText("10.42.0.2")
         #----accompanying label
         self.ip_label = QLabel(self)
         self.ip_label.setText("IP ADDRESS ")
@@ -201,7 +200,7 @@ class App(QMainWindow):
         self.total_opening_time = self.total_opening_time_box.text()
         self.initial_opening_time = self.initial_opening_time_box.text()
         
-        self.engine_data = "HEAD " + self.launch_code + " " + self.burn_duration + " " + self.ignitor_timing + " " + self.valve_open_timing + " " + self.valve_closing_time + " " + self.limit_switch_slowdown + " " + self.opening_profile_angle_delimiter + " " + self.total_opening_time + " " + self.initial_opening_time
+        self.engine_data = "HEAD " + self.launch_code + " " + self.burn_duration + " " + self.ignitor_timing + " " + self.valve_open_timing + " " + self.valve_closing_time + " " + self.limit_switch_slowdown + " " + self.angle_limit_switch_slowdown + " " + self.opening_profile_angle_delimiter + " " + self.total_opening_time + " " + self.initial_opening_time
         
          #establishing the socket connection
         try:
@@ -221,7 +220,7 @@ class App(QMainWindow):
     #read data from the server to assure that the message was received
     def receive_data(self):
         while 1:
-            server_response = self.sock.recv(1024);
+            server_response = self.sock.recv(1024)
             if(server_response):
                 print(server_response)
 
@@ -231,9 +230,6 @@ class App(QMainWindow):
         self.setFixedSize(400,900)
         self.setWindowIcon(QtGui.QIcon('icon.png'))
         self.show()
-
-    def closeEventCallback(self,event):
-        self.sock.close() 
         
 #Create the object of the class and thus our app
 
