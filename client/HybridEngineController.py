@@ -22,6 +22,8 @@ class App(QMainWindow):
         self.textboxes()
         self.buttons()
         self.window()
+        self.sock = socket.socket()
+        self.closeEvent = self.closeEventCallback
 
     def textboxes(self):
 
@@ -164,10 +166,6 @@ class App(QMainWindow):
         self.status_box.move(80,770);
         self.status_box.resize(230,100);
         self.status_box.setPlainText("Awaiting the message from the raspberry pi. Please, don't input anything in this field")
-        
-
-    
-
 
     def buttons(self):
 
@@ -203,10 +201,9 @@ class App(QMainWindow):
         self.total_opening_time = self.total_opening_time_box.text()
         self.initial_opening_time = self.initial_opening_time_box.text()
         
-        self.engine_data = "HEAD" + self.launch_code + " " + self.burn_duration + " " + self.ignitor_timing + " " + self.valve_open_timing + " " + self.valve_closing_time + " " + self.limit_switch_slowdown + " " + self.opening_profile_angle_delimiter + " " + self.total_opening_time + " " + self.initial_opening_time
+        self.engine_data = "HEAD " + self.launch_code + " " + self.burn_duration + " " + self.ignitor_timing + " " + self.valve_open_timing + " " + self.valve_closing_time + " " + self.limit_switch_slowdown + " " + self.opening_profile_angle_delimiter + " " + self.total_opening_time + " " + self.initial_opening_time
         
          #establishing the socket connection
-        self.sock = socket.socket()
         try:
             self.sock.connect((self.ip_box.text(), 9999))
             self.status_box.setPlainText("CONNECTION IS ESTABLISHED! Here is the data that your are about to send: " + "LAUNCH CODE: " + self.launch_code + " BURN DURATION: " + self.burn_duration + " IGNITOR TIMING: " + self.ignitor_timing + " VALVE OPENING TIME: " + self.valve_open_timing + " VALVE CLOSING TIME: " + self.valve_closing_time + " LIMIT SWITCH SLOWDOWN: " + self.limit_switch_slowdown + " OPENING PROFILE ANGLE DELIMITER: " + self.opening_profile_angle_delimiter + " TOTAL OPENING TIME: " + self.total_opening_time + " INITIAL OPENING TIME: " + self.initial_opening_time + " Click submit if the data is correct!")
@@ -235,8 +232,9 @@ class App(QMainWindow):
         self.setWindowIcon(QtGui.QIcon('icon.png'))
         self.show()
 
-
-
+    def closeEventCallback(self,event):
+        self.sock.close() 
+        
 #Create the object of the class and thus our app
 
 if __name__ == '__main__':
