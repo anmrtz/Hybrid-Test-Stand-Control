@@ -1,0 +1,159 @@
+import sys
+import ctypes
+class ChannelClass:
+	# Not a channel
+	PHIDCHCLASS_NOTHING = 0
+	# Accelerometer channel
+	PHIDCHCLASS_ACCELEROMETER = 1
+	# Current input channel
+	PHIDCHCLASS_CURRENTINPUT = 2
+	# Data adapter channel
+	PHIDCHCLASS_DATAADAPTER = 3
+	# DC motor channel
+	PHIDCHCLASS_DCMOTOR = 4
+	# Digital input channel
+	PHIDCHCLASS_DIGITALINPUT = 5
+	# Digital output channel
+	PHIDCHCLASS_DIGITALOUTPUT = 6
+	# Distance sensor channel
+	PHIDCHCLASS_DISTANCESENSOR = 7
+	# Encoder channel
+	PHIDCHCLASS_ENCODER = 8
+	# Frequency counter channel
+	PHIDCHCLASS_FREQUENCYCOUNTER = 9
+	# GPS channel
+	PHIDCHCLASS_GPS = 10
+	# LCD channel
+	PHIDCHCLASS_LCD = 11
+	# Gyroscope channel
+	PHIDCHCLASS_GYROSCOPE = 12
+	# VINT Hub channel
+	PHIDCHCLASS_HUB = 13
+	# Capacitive Touch channel
+	PHIDCHCLASS_CAPACITIVETOUCH = 14
+	# Humidity sensor channel
+	PHIDCHCLASS_HUMIDITYSENSOR = 15
+	# IR channel
+	PHIDCHCLASS_IR = 16
+	# Light sensor channel
+	PHIDCHCLASS_LIGHTSENSOR = 17
+	# Magnetometer channel
+	PHIDCHCLASS_MAGNETOMETER = 18
+	# Mesh dongle channel
+	PHIDCHCLASS_MESHDONGLE = 19
+	# pH sensor channel
+	PHIDCHCLASS_PHSENSOR = 37
+	# Power guard channel
+	PHIDCHCLASS_POWERGUARD = 20
+	# Pressure sensor channel
+	PHIDCHCLASS_PRESSURESENSOR = 21
+	# RC Servo channel
+	PHIDCHCLASS_RCSERVO = 22
+	# Resistance input channel
+	PHIDCHCLASS_RESISTANCEINPUT = 23
+	# RFID channel
+	PHIDCHCLASS_RFID = 24
+	# Sound sensor channel
+	PHIDCHCLASS_SOUNDSENSOR = 25
+	# Spatial channel
+	PHIDCHCLASS_SPATIAL = 26
+	# Stepper channel
+	PHIDCHCLASS_STEPPER = 27
+	# Temperature sensor channel
+	PHIDCHCLASS_TEMPERATURESENSOR = 28
+	# Voltage input channel
+	PHIDCHCLASS_VOLTAGEINPUT = 29
+	# Voltage output channel
+	PHIDCHCLASS_VOLTAGEOUTPUT = 30
+	# Voltage ratio input channel
+	PHIDCHCLASS_VOLTAGERATIOINPUT = 31
+	# Firmware upgrade channel
+	PHIDCHCLASS_FIRMWAREUPGRADE = 32
+	# Generic channel
+	PHIDCHCLASS_GENERIC = 33
+	# Motor position control channel.
+	PHIDCHCLASS_MOTORPOSITIONCONTROLLER = 34
+	# BLDC motor channel
+	PHIDCHCLASS_BLDCMOTOR = 35
+	# Dictionary
+	PHIDCHCLASS_DICTIONARY = 36
+
+	@classmethod
+	def getName(self, val):
+		if val == self.PHIDCHCLASS_NOTHING:
+			return "PHIDCHCLASS_NOTHING"
+		if val == self.PHIDCHCLASS_ACCELEROMETER:
+			return "PHIDCHCLASS_ACCELEROMETER"
+		if val == self.PHIDCHCLASS_CURRENTINPUT:
+			return "PHIDCHCLASS_CURRENTINPUT"
+		if val == self.PHIDCHCLASS_DATAADAPTER:
+			return "PHIDCHCLASS_DATAADAPTER"
+		if val == self.PHIDCHCLASS_DCMOTOR:
+			return "PHIDCHCLASS_DCMOTOR"
+		if val == self.PHIDCHCLASS_DIGITALINPUT:
+			return "PHIDCHCLASS_DIGITALINPUT"
+		if val == self.PHIDCHCLASS_DIGITALOUTPUT:
+			return "PHIDCHCLASS_DIGITALOUTPUT"
+		if val == self.PHIDCHCLASS_DISTANCESENSOR:
+			return "PHIDCHCLASS_DISTANCESENSOR"
+		if val == self.PHIDCHCLASS_ENCODER:
+			return "PHIDCHCLASS_ENCODER"
+		if val == self.PHIDCHCLASS_FREQUENCYCOUNTER:
+			return "PHIDCHCLASS_FREQUENCYCOUNTER"
+		if val == self.PHIDCHCLASS_GPS:
+			return "PHIDCHCLASS_GPS"
+		if val == self.PHIDCHCLASS_LCD:
+			return "PHIDCHCLASS_LCD"
+		if val == self.PHIDCHCLASS_GYROSCOPE:
+			return "PHIDCHCLASS_GYROSCOPE"
+		if val == self.PHIDCHCLASS_HUB:
+			return "PHIDCHCLASS_HUB"
+		if val == self.PHIDCHCLASS_CAPACITIVETOUCH:
+			return "PHIDCHCLASS_CAPACITIVETOUCH"
+		if val == self.PHIDCHCLASS_HUMIDITYSENSOR:
+			return "PHIDCHCLASS_HUMIDITYSENSOR"
+		if val == self.PHIDCHCLASS_IR:
+			return "PHIDCHCLASS_IR"
+		if val == self.PHIDCHCLASS_LIGHTSENSOR:
+			return "PHIDCHCLASS_LIGHTSENSOR"
+		if val == self.PHIDCHCLASS_MAGNETOMETER:
+			return "PHIDCHCLASS_MAGNETOMETER"
+		if val == self.PHIDCHCLASS_MESHDONGLE:
+			return "PHIDCHCLASS_MESHDONGLE"
+		if val == self.PHIDCHCLASS_PHSENSOR:
+			return "PHIDCHCLASS_PHSENSOR"
+		if val == self.PHIDCHCLASS_POWERGUARD:
+			return "PHIDCHCLASS_POWERGUARD"
+		if val == self.PHIDCHCLASS_PRESSURESENSOR:
+			return "PHIDCHCLASS_PRESSURESENSOR"
+		if val == self.PHIDCHCLASS_RCSERVO:
+			return "PHIDCHCLASS_RCSERVO"
+		if val == self.PHIDCHCLASS_RESISTANCEINPUT:
+			return "PHIDCHCLASS_RESISTANCEINPUT"
+		if val == self.PHIDCHCLASS_RFID:
+			return "PHIDCHCLASS_RFID"
+		if val == self.PHIDCHCLASS_SOUNDSENSOR:
+			return "PHIDCHCLASS_SOUNDSENSOR"
+		if val == self.PHIDCHCLASS_SPATIAL:
+			return "PHIDCHCLASS_SPATIAL"
+		if val == self.PHIDCHCLASS_STEPPER:
+			return "PHIDCHCLASS_STEPPER"
+		if val == self.PHIDCHCLASS_TEMPERATURESENSOR:
+			return "PHIDCHCLASS_TEMPERATURESENSOR"
+		if val == self.PHIDCHCLASS_VOLTAGEINPUT:
+			return "PHIDCHCLASS_VOLTAGEINPUT"
+		if val == self.PHIDCHCLASS_VOLTAGEOUTPUT:
+			return "PHIDCHCLASS_VOLTAGEOUTPUT"
+		if val == self.PHIDCHCLASS_VOLTAGERATIOINPUT:
+			return "PHIDCHCLASS_VOLTAGERATIOINPUT"
+		if val == self.PHIDCHCLASS_FIRMWAREUPGRADE:
+			return "PHIDCHCLASS_FIRMWAREUPGRADE"
+		if val == self.PHIDCHCLASS_GENERIC:
+			return "PHIDCHCLASS_GENERIC"
+		if val == self.PHIDCHCLASS_MOTORPOSITIONCONTROLLER:
+			return "PHIDCHCLASS_MOTORPOSITIONCONTROLLER"
+		if val == self.PHIDCHCLASS_BLDCMOTOR:
+			return "PHIDCHCLASS_BLDCMOTOR"
+		if val == self.PHIDCHCLASS_DICTIONARY:
+			return "PHIDCHCLASS_DICTIONARY"
+		return "<invalid enumeration value>"
