@@ -32,7 +32,7 @@ class App(QMainWindow):
         self.ip_box.move(130, 20)
         self.ip_box.resize(230,30)
         self.ip_box.setPlaceholderText("IP address")
-        self.ip_box.setText("localhost")
+        self.ip_box.setText("10.42.0.2")
         #----accompanying label
         self.ip_label = QLabel(self)
         self.ip_label.setText("IP ADDRESS ")
