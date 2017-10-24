@@ -16,3 +16,4 @@ conn.send(b"connected")
 while True:
     data = conn.recv(1024)
     print(data.decode())
+    conn.send(b"connected")
