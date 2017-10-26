@@ -111,6 +111,7 @@ def OpenValve(ch, slowSpeed, slowAngle, fullSpeed, fullOpen, bufferPercentage,bu
         # do nothing until we hit angle we want
         currPos = ch.getPosition()
     ch.setVelocityLimit(fullSpeed)
+   
     ch.setTargetPosition(fullOpen-bufferAmount)
     while currPos < bufferedAngle:
         # do nothing until we hit angle we want
@@ -145,3 +146,16 @@ def closeNoBuffer(fullSpeed):
     
 def UnlockValve(ch):
     ch.setEngaged(0)
+
+#Function activated by limit swtich detected, stops motor and does the burn
+def openDetected(ch,burntime,fullSpeed, bufferPercentage,bufferSpeedPercent):
+    ch.setVelocityLimit(0)
+    time.sleep(burntime)
+    closeValve(ch,fullSpeed, bufferPercentage,bufferSpeedPercent)
+    
+#Function activated by closed limit switch, stops motor
+def openDetected(ch):
+    ch.setVelocityLimit(0)
+    time.sleep(1)
+    
+    
