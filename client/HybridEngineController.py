@@ -21,13 +21,20 @@ class ReceiveThread(QtCore.QThread):
         self.sock = sock
 
     def run(self):
+        self.msg_received.emit('\nStarting receive thread...')
         while True:
-            self.server_response = self.sock.recv(1024)
-            if(self.server_response == ""):
-                self.msg_received.emit('%s' % (str(server_response, "utf-8")))
-            else:
+            try:
+                server_response = self.sock.recv(4096)
+            except Exception as e:
+                self.msg_received.emit('\nReceive thread failed: %s' % str(e))
+                break    
+            msg = str(server_response, "utf-8")
+            if (msg == ''):
+                self.msg_received.emit('\nReceive thread connection lost!')
                 break
-
+            self.msg_received.emit('\nReceived: %s' % msg)
+        self.msg_received.emit('\nReceive thread ended!')
+	
 #The main class containing our app
 class App(QMainWindow):
 
@@ -38,6 +45,8 @@ class App(QMainWindow):
         self.buttons()
         self.window()
         self.sock = socket.socket()
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock.setblocking(True)
 
     def textboxes(self):
 
@@ -176,10 +185,10 @@ class App(QMainWindow):
         self.opening_time_label.move(20,520)
         
         #Raspberry Status
-        self.status_box = QPlainTextEdit(self);
+        self.status_box = QPlainTextEdit(self)
+        self.status_box.setReadOnly(True)
         self.status_box.move(400,20);
         self.status_box.resize(380,650);
-        self.status_box.appendPlainText("Awaiting the message from the raspberry pi. Please don't input anything in this field")
 
     def buttons(self):
 
@@ -190,39 +199,41 @@ class App(QMainWindow):
         self.connect.move(100, 570)
         self.connect.clicked.connect(self.set_connection)
 
-
         #submit button
         self.submit = QPushButton('Submit', self)
         self.submit.setToolTip('You can only submit after the connection has been successfully established')
         self.submit.resize(80,40)
         self.submit.move(200, 570)
         self.submit.clicked.connect(self.submit_data)
-        #self.submit.clicked.connect(self.set_connection)
-
+        self.submit.setEnabled(False)
+        
         #ABORT button
         self.abort = QPushButton('Abort', self)
         self.abort.resize(80,40)
         self.abort.move(205,630)
         self.abort.clicked.connect(self.abortion)
+        self.abort.setEnabled(False)
 
         #TEST IGNITOR button
         self.ignitor = QPushButton('Test Ignitor', self)
         self.ignitor.resize(80,40)
         self.ignitor.move(295,630)
         self.ignitor.clicked.connect(self.ignition)
+        self.ignitor.setEnabled(False)
 
         #OPEN VALVE button
         self.open_valve = QPushButton('Open Valve', self)
         self.open_valve.resize(80,40)
         self.open_valve.move(30,630)
         self.open_valve.clicked.connect(self.valve_opener)
+        self.open_valve.setEnabled(False)
 
         #CLOSE VALVE button
         self.close_valve = QPushButton('Close Valve', self)
         self.close_valve.resize(80,40)
         self.close_valve.move(120,630)
         self.close_valve.clicked.connect(self.valve_closer)
-        
+        self.close_valve.setEnabled(False)
 
     #in this part of the code we need to connect using sockets
     def set_connection(self):         
@@ -244,22 +255,29 @@ class App(QMainWindow):
          #establishing the socket connection
         try:
             self.sock.connect((self.ip_box.text(), 9999))
-            self.status_box.setPlainText("CONNECTION IS ESTABLISHED! Here is the data that your are about to send: " + "LAUNCH CODE: " + self.launch_code + " BURN DURATION: " + self.burn_duration + " IGNITOR TIMING: " + self.ignitor_timing + " VALVE OPENING TIME: " + self.valve_open_timing + " VALVE CLOSING TIME: " + self.valve_closing_time + " LIMIT SWITCH SLOWDOWN: " + self.limit_switch_slowdown + " OPENING PROFILE ANGLE DELIMITER: " + self.opening_profile_angle_delimiter + " TOTAL OPENING TIME: " + self.total_opening_time + " INITIAL OPENING TIME: " + self.initial_opening_time + " Click submit if the data is correct!")
-        except:
-            print("Error")
-            QMessageBox.about(self, "Problem", "No connection baby!")
- 
+            self.status_box.appendPlainText("\nCONNECTION IS ESTABLISHED!\nHere is the data that your are about to send:" + "\nLAUNCH CODE: " + self.launch_code + "\nBURN DURATION: " + self.burn_duration + "\nIGNITOR TIMING: " + self.ignitor_timing + "\nVALVE OPENING TIME: " + self.valve_open_timing + "\nVALVE CLOSING TIME: " + self.valve_closing_time + "\nLIMIT SWITCH SLOWDOWN: " + self.limit_switch_slowdown + "\nOPENING PROFILE ANGLE DELIMITER: " + self.opening_profile_angle_delimiter + "\nTOTAL OPENING TIME: " + self.total_opening_time + "\nINITIAL OPENING TIME: " + self.initial_opening_time + "\n\nClick submit if the data is correct!")
+
+            self.receiver = ReceiveThread(self.sock)
+            self.receiver.msg_received.connect(self.on_msg_received)
+            self.receiver.start()        
+
+            self.connect.setEnabled(False)
+            self.submit.setEnabled(True) 
+        except Exception as e:
+            self.status_box.appendPlainText("Connection failure:" + str(e))
 
     
     #submit data to the  server
     def submit_data(self):
-        self.sock.sendall(self.engine_data.encode())
-        self.recv_thread = QThread()
-        self.recv_thread.start()
-
-        receiver = ReceiveThread(self.sock)
-        receiver.msg_received.connect(self.on_msg_received)
-        receiver.start()        
+        try:
+            self.sock.sendall(self.engine_data.encode())
+        except Exception as e:
+            self.status_box.appendPlainText("Problem: " + str(e))
+            return
+        self.abort.setEnabled(True)
+        self.ignitor.setEnabled(True)
+        self.open_valve.setEnabled(True)
+        self.close_valve.setEnabled(True)
 
     #abort
     def abortion(self):
