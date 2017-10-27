@@ -7,12 +7,26 @@
 #required libraries
 import sys
 import socket
-import _thread
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import pyqtSlot
-from PyQt5 import QtGui
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import *
+from PyQt5 import *
+
+class ReceiveThread(QtCore.QThread):
+
+    msg_received = QtCore.pyqtSignal(object)
+
+    def __init__(self, sock):
+        QtCore.QThread.__init__(self)
+        self.sock = sock
+
+    def run(self):
+        while True:
+            self.server_response = self.sock.recv(1024)
+            if(self.server_response == ""):
+                self.msg_received.emit('%s' % (str(server_response, "utf-8")))
+            else:
+                break
 
 #The main class containing our app
 class App(QMainWindow):
@@ -163,9 +177,9 @@ class App(QMainWindow):
         
         #Raspberry Status
         self.status_box = QPlainTextEdit(self);
-        self.status_box.move(80,690);
-        self.status_box.resize(230,100);
-        self.status_box.setPlainText("Awaiting the message from the raspberry pi. Please, don't input anything in this field")
+        self.status_box.move(400,20);
+        self.status_box.resize(380,650);
+        self.status_box.appendPlainText("Awaiting the message from the raspberry pi. Please don't input anything in this field")
 
     def buttons(self):
 
@@ -240,7 +254,12 @@ class App(QMainWindow):
     #submit data to the  server
     def submit_data(self):
         self.sock.sendall(self.engine_data.encode())
-        _thread.start_new_thread(self.receive_data, ())
+        self.recv_thread = QThread()
+        self.recv_thread.start()
+
+        receiver = ReceiveThread(self.sock)
+        receiver.msg_received.connect(self.on_msg_received)
+        receiver.start()        
 
     #abort
     def abortion(self):
@@ -258,28 +277,16 @@ class App(QMainWindow):
     def valve_closer(self):
         self.sock.sendall("VALVE CLOSE".encode())
 
-    #read data from the server to assure that the message was received
-    def receive_data(self):
-        data_received = pyqtSignal('QString')
-        while 1:
-            server_response = self.sock.recv(1024)
-            if(server_response):
-                print(server_response) #this should be shown on the status_box but I don't know how to get the data from this thread and send it to the main thread
-                #self.status_box.setPlainText("fuck man")#str(server_response, "utf-8"))
+    def on_msg_received(self, msg):
+        self.status_box.appendPlainText(msg)
                 
-   
-    
-        
-
     #this method is responsible for basic window parameters
     def window(self):
         self.setWindowTitle(self.title)
-        self.setFixedSize(400,815)
+        self.setFixedSize(800,700)
         self.setWindowIcon(QtGui.QIcon('icon.png'))
         self.show()
         
-#Create the object of the class and thus our app
-
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = App()
