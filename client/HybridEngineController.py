@@ -15,6 +15,8 @@ from PyQt5 import *
 class ReceiveThread(QtCore.QThread):
 
     msg_received = QtCore.pyqtSignal(object)
+    limit_state_received = QtCore.pyqtSignal(int, int)
+    conn_lost = QtCore.pyqtSignal(object)
 
     def __init__(self, sock):
         QtCore.QThread.__init__(self)
@@ -30,10 +32,19 @@ class ReceiveThread(QtCore.QThread):
                 break    
             msg = str(server_response, "utf-8")
             if (msg == ''):
-                self.msg_received.emit('\nReceive thread connection lost!')
+                self.conn_lost.emit('\nReceive thread connection lost!')
                 break
-            self.msg_received.emit('\nReceived: %s' % msg)
-        self.msg_received.emit('\nReceive thread ended!')
+                
+            tokens = msg.split()
+            if (tokens[0] == 'LIMIT'):
+            	try:
+                    switch_open = int(tokens[1])
+                    switch_closed = int(tokens[2])
+                    self.limit_state_received.emit(switch_open,switch_closed)
+            	except Exception as e:
+                    self.msg_received.emit('\nInvalid limit switch token: ' + str(e))
+            else:
+                self.msg_received.emit('\nReceived: %s' % msg)
 	
 #The main class containing our app
 class App(QMainWindow):
@@ -55,7 +66,7 @@ class App(QMainWindow):
         self.ip_box.move(130, 20)
         self.ip_box.resize(230,30)
         self.ip_box.setPlaceholderText("IP address")
-        self.ip_box.setText("10.42.0.2")
+        self.ip_box.setText("10.42.0.199")
         #----accompanying label
         self.ip_label = QLabel(self)
         self.ip_label.setText("IP ADDRESS ")
@@ -187,9 +198,22 @@ class App(QMainWindow):
         #Raspberry Status
         self.status_box = QPlainTextEdit(self)
         self.status_box.setReadOnly(True)
-        self.status_box.move(400,20);
-        self.status_box.resize(380,650);
+        self.status_box.move(400,70);
+        self.status_box.resize(380,600);
 
+		#Limit switch indicator
+        self.indicator = QPushButton(self)
+        self.indicator.move(530,20)
+        self.indicator.resize(250,30)
+        self.indicator.setEnabled(False)
+        self.indicator.setText("Unknown")
+        self.indicator.setStyleSheet("background-color: gray")
+
+        #limit indicator label
+        self.indicator_label = QLabel(self)
+        self.indicator_label.setText("Valve status")
+        self.indicator_label.move(400,20)
+		
     def buttons(self):
 
         #connect button
@@ -259,6 +283,8 @@ class App(QMainWindow):
 
             self.receiver = ReceiveThread(self.sock)
             self.receiver.msg_received.connect(self.on_msg_received)
+            self.reciever.limit_state_received.connect(self.on_limit_state_received)
+            self.reciever.conn_lost.connect(self.on_conn_lost)
             self.receiver.start()        
 
             self.connect.setEnabled(False)
@@ -266,7 +292,6 @@ class App(QMainWindow):
         except Exception as e:
             self.status_box.appendPlainText("Connection failure:" + str(e))
 
-    
     #submit data to the  server
     def submit_data(self):
         try:
@@ -298,6 +323,26 @@ class App(QMainWindow):
     def on_msg_received(self, msg):
         self.status_box.appendPlainText(msg)
                 
+    def on_limit_state_received(self, switch_open, switch_closed):
+        if switch_open and not switch_closed:
+            self.indicator.setText("FULLY OPEN")
+            self.indicator.setStyleSheet("background-color: green")
+        elif not switch_open and switch_closed:
+            self.indicator.setText("FULLY CLOSED")
+            self.indicator.setStyleSheet("background-color: red")
+        elif not switch_open and not switch_closed:
+            self.indicator.setText("INTERMEDIATE")
+            self.indicator.setStyleSheet("background-color: yellow")
+        else:
+            self.indicator.setText("INVALID")
+            self.indicator.setStyleSheet("background-color: white")
+    	
+    def on_conn_lost(self, msg):
+        self.status_box.appendPlainText(msg)
+        self.indicator.setText("Unknown")
+        self.indicator.setStyleSheet("background-color: gray")
+        self.sock.close()
+
     #this method is responsible for basic window parameters
     def window(self):
         self.setWindowTitle(self.title)
