@@ -4,9 +4,63 @@ from Phidget22.Devices.Stepper import *
 from Phidget22.PhidgetException import *
 from Phidget22.Phidget import *
 from Phidget22.Net import *
+import  RPi.GPIO as GPIO
+
+#settings
+ch = null
+fullSpeed = 0
+slowSpeed = 0
+slowAngle = 0
+fullOpen =  0
+bufferPercentage = 0
+bufferSpeedPercent = 0
+#Calcuated
+bufferSpeed = 0
+bufferAmount = 0
+#Limit swtich status
+open_detected=0
+closed_detected=0
+
+#Load in settings and store
+
+def storeSettings (setCh, setfullSpeed, setslowSpeed, setslowAngle, setfullOpen, setbufferPercentage, setbufferSpeedPercent,setOpenPin,setClosePin):
+    #set the library variables
+    global ch, fullSpeed, slowSpeed, fullOpen, bufferPercentage, bufferSpeedPercent, bufferSpeed, bufferAmount
+    ch = setCh
+    fullSpeed = setfullSpeed
+    slowSpeed = setslowSpeed
+    slowAngle = setslowAngle
+    fullOpen = setfullOpen
+    bufferPercentage = setbufferPercentage
+    bufferSpeedPercent = setbufferSpeedPercent
+    #Buffer calculations
+    bufferAmount = 90*(bufferPercentage/100)
+    bufferSpeed = fullSpeed*(bufferSpeedPercent/100)
+    #limit switch calls
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(setClosePin, GPIO.IN,pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(setOpenPin, GPIO.IN,pull_up_down=GPIO.PUD_UP)
+    GPIO.add_event_detect(setClosePin,GPIO.FALLING, callback=close_callback,bouncetime=300)
+    GPIO.add_event_detect(setOpenPin,GPIO.FALLING, callback=open_callback,bouncetime=300)
+
+    print("Settings stored")
+
+#Set funtions to detect and global vars based on if we hit the limit switches
+def open_callback(channel):
+    global open_detected
+    print ("open detected by thread")
+    print ("Pause for burn")
+    print("Now we would call close func")
+    open_detected=1
+
+def close_callback(channel):
+    global closed_detected
+    print ("closed detected by thread")
+    print("Just stop the motor!")
+    closed_detected=1
+
+
 # Setup the Stepper object, takes serial as a value to set on
-
-
 def SetupStepper(serial):
     try:
         ch = Stepper()
@@ -87,7 +141,7 @@ def PositionChangeHandler(e, position):
     print("Position: %f" % position)
 # Pass rescale value to allow work in degrees (in our case 0.1125)
 
-def SetRescale(ch, value):
+def SetRescale():
     ch.setRescaleFactor(value)
 
 # Grab the current postion and set as the zero positon
@@ -100,10 +154,8 @@ def SetStart(ch):
 # This should be interupted by limit switches
 
 
-def OpenValve(ch, slowSpeed, slowAngle, fullSpeed, fullOpen, bufferPercentage,bufferSpeedPercent):
+def OpenValve():
     currPos = 0
-    bufferAmount = 90*(bufferPercentage/100)
-    bufferSpeed = fullSpeed*(bufferSpeedPercent/100)
     bufferedAngle = fullOpen-bufferAmount
     ch.setVelocityLimit(slowSpeed)
     ch.setTargetPosition(slowAngle)
@@ -122,10 +174,8 @@ def OpenValve(ch, slowSpeed, slowAngle, fullSpeed, fullOpen, bufferPercentage,bu
 # Function to close valve with buffers an
 
 
-def closeValve(ch,fullSpeed, bufferPercentage,bufferSpeedPercent):
+def closeValve():
     currPos = ch.getPosition()
-    bufferAmount = 90*(bufferPercentage/100)
-    bufferSpeed = fullSpeed*(bufferSpeedPercent/100)
     ch.setVelocityLimit(fullSpeed)
     ch.setTargetPosition(bufferAmount)
     while currPos > bufferAmount:
@@ -138,40 +188,38 @@ def closeValve(ch,fullSpeed, bufferPercentage,bufferSpeedPercent):
 # DANGER IGNORES BUFFERS, COULD DAMAGE LIMIT SWITCHES
 
 
-def closeNoBuffer(fullSpeed):
+def closeNoBuffer():
     ch.setVelocityLimit(fullSpeed)
     ch.setPosition(0)
 
 #DANGER, DISENGAGES STEPPER, WILL ALLOW TURNING BY PRESSURE FORCE
 
-def UnlockValve(ch):
+def UnlockValve():
     ch.setEngaged(0)
 
 #Function activated by limit swtich detected, stops motor and does the burn
 
-def openDetected(ch,burntime,fullSpeed, bufferPercentage,bufferSpeedPercent):
+def openDetected():
     ch.setVelocityLimit(0)
     time.sleep(burntime)
     closeValve(ch,fullSpeed, bufferPercentage,bufferSpeedPercent)
 
 #moves the valve open by 1 degree more
 
-def degOpen(ch,fullSpeed,bufferSpeedPercent):
+def degOpen():
     print("Opening by one degree")
-    bufferSpeed = fullSpeed*(bufferSpeedPercent/100)
     ch.setVelocityLimit(bufferSpeed)
     #move one dgeree at buffer speed
     ch.setTargetPosition(ch.getPosition()+1)
 
 #close valve by one degree
 
-def degClose(ch,fullSpeed,bufferSpeedPercent):
+def degClose():
     print("Closing by one degree")
-    bufferSpeed = fullSpeed*(bufferSpeedPercent/100)
     ch.setVelocityLimit(bufferSpeed)
     ch.setTargetPosition(ch.getPosition()-1)
 
 #Function activated by closed limit switch, stops motor
-def closeDetected(ch):
+def closeDetected():
     ch.setVelocityLimit(0)
     time.sleep(1)
