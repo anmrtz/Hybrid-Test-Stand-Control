@@ -14,6 +14,7 @@ slowAngle = 0
 fullOpen =  0
 bufferPercentage = 0
 bufferSpeedPercent = 0
+rescale = 0.1125
 #Calcuated
 bufferSpeed = 0
 bufferAmount = 0
@@ -142,7 +143,7 @@ def PositionChangeHandler(e, position):
 # Pass rescale value to allow work in degrees (in our case 0.1125)
 
 def SetRescale():
-    ch.setRescaleFactor(value)
+    ch.setRescaleFactor(rescale)
 
 # Grab the current postion and set as the zero positon
 
