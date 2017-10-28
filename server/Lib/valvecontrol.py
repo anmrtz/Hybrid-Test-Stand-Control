@@ -6,14 +6,15 @@ from Phidget22.Phidget import *
 from Phidget22.Net import *
 import  RPi.GPIO as GPIO
 
+
 #settings
 ch = None
-fullSpeed = 0
-slowSpeed = 0
-slowAngle = 0
-fullOpen =  0
-bufferPercentage = 0
-bufferSpeedPercent = 0
+fullSpeed = 200
+slowSpeed = 100
+slowAngle = 20
+fullOpen =  90
+bufferPercentage = 5
+bufferSpeedPercent = 10
 rescale = 0.1125
 #Calcuated
 bufferSpeed = 0
@@ -21,6 +22,9 @@ bufferAmount = 0
 #Limit swtich status
 open_detected=0
 closed_detected=0
+hasOpened = 0
+
+complete = 0
 
 #Load in settings and store
 
@@ -38,27 +42,32 @@ def storeSettings (setCh, setfullSpeed, setslowSpeed, setslowAngle, setfullOpen,
     bufferAmount = 90*(bufferPercentage/100)
     bufferSpeed = fullSpeed*(bufferSpeedPercent/100)
     #limit switch calls
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(setClosePin, GPIO.IN,pull_up_down=GPIO.PUD_UP)
-    GPIO.setup(setOpenPin, GPIO.IN,pull_up_down=GPIO.PUD_UP)
-    GPIO.add_event_detect(setClosePin,GPIO.FALLING, callback=close_callback,bouncetime=300)
-    GPIO.add_event_detect(setOpenPin,GPIO.FALLING, callback=open_callback,bouncetime=300)
+    #GPIO.setmode(GPIO.BCM)
+    #GPIO.setup(setClosePin, GPIO.IN,pull_up_down=GPIO.PUD_UP)
+    #GPIO.setup(setOpenPin, GPIO.IN,pull_up_down=GPIO.PUD_UP)
+    #GPIO.add_event_detect(setClosePin,GPIO.FALLING, callback=close_callback,bouncetime=300)
+    #GPIO.add_event_detect(setOpenPin,GPIO.RISING, callback=open_callback,bouncetime=300)
 
     print("Settings stored")
 
 #Set funtions to detect and global vars based on if we hit the limit switches
 def open_callback(channel):
     global open_detected
-    print ("open detected by thread")
-    print ("Pause for burn")
-    print("Now we would call close func")
+    ch.setVelocityLimit(0)
     open_detected=1
 
 def close_callback(channel):
     global closed_detected
-    print ("closed detected by thread")
-    print("Just stop the motor!")
-    closed_detected=1
+    if (open_detected == 1):
+        ch.setVelocityLimit(0)
+        time.sleep(100)
+        #print("both done, exiting")
+        #GPIO.remove_event_detect(21)
+        #GPIO.cleanup()
+        #print("GPIO should be cleaned by now")
+        #ch.setEngaged(0)
+        #exit(0)
+        closed_detected=1
 
 
 # Setup the Stepper object, takes serial as a value to set on
@@ -197,6 +206,10 @@ def closeNoBuffer():
 
 def UnlockValve():
     ch.setEngaged(0)
+    GPIO.cleanup()
+    
+def shutdown():
+    ch.close()
 
 #Function activated by limit swtich detected, stops motor and does the burn
 
@@ -207,18 +220,22 @@ def openDetected():
 
 #moves the valve open by 1 degree more
 
-def degOpen():
+def degOpen(numDeg = 1):
     print("Opening by one degree")
+    #time.sleep(0.001)
     ch.setVelocityLimit(bufferSpeed)
     #move one dgeree at buffer speed
-    ch.setTargetPosition(ch.getPosition()+1)
+    if (open_detected ==0):
+        ch.setTargetPosition(ch.getPosition()+numDeg)
 
 #close valve by one degree
 
-def degClose():
+def degClose(numDeg = 1):
     print("Closing by one degree")
+    #time.sleep(0.001)
     ch.setVelocityLimit(bufferSpeed)
-    ch.setTargetPosition(ch.getPosition()-1)
+    if (closed_detected == 0):
+        ch.setTargetPosition(ch.getPosition()-numDeg)
 
 #Function activated by closed limit switch, stops motor
 def closeDetected():
