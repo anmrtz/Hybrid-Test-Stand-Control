@@ -7,7 +7,7 @@ from Phidget22.Net import *
 import  RPi.GPIO as GPIO
 
 #settings
-ch = null
+ch = None
 fullSpeed = 0
 slowSpeed = 0
 slowAngle = 0

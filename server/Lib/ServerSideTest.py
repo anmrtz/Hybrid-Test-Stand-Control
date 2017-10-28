@@ -1,4 +1,4 @@
-import valve as valve
+import valvecontrol as valve
 import time
 
 
