@@ -5,6 +5,10 @@ import time
 import os
 import signal
 
+sys.path.insert(0,'./Lib')
+
+#import ServerSideTest
+
 # global abort/end-of-test flag
 # consider placing this in TestMain...
 END_TEST = False
@@ -125,6 +129,9 @@ class TestMain:
 
 		#successful end of test
 		endTest("End of TestMain")
+
+	def postMessage(self,msg):
+		pass
 
 	# handle Ctrl-C
 	def handleKeyboardInt(self, signal, frame):
