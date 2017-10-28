@@ -66,7 +66,7 @@ def StepperAttached(e):
         print("Press Enter to Exit...\n")
         readin = sys.stdin.read(1)
         exit(1)
-    
+
 def StepperDetached(e):
     detached = e
     try:
@@ -75,7 +75,7 @@ def StepperDetached(e):
         print("Phidget Exception %i: %s" % (e.code, e.details))
         print("Press Enter to Exit...\n")
         readin = sys.stdin.read(1)
-        exit(1)   
+        exit(1)
 
 #Helper to print passed error messages to the shell
 def ErrorEvent(e, eCode, description):
@@ -111,7 +111,7 @@ def OpenValve(ch, slowSpeed, slowAngle, fullSpeed, fullOpen, bufferPercentage,bu
         # do nothing until we hit angle we want
         currPos = ch.getPosition()
     ch.setVelocityLimit(fullSpeed)
-   
+
     ch.setTargetPosition(fullOpen-bufferAmount)
     while currPos < bufferedAngle:
         # do nothing until we hit angle we want
@@ -141,21 +141,37 @@ def closeValve(ch,fullSpeed, bufferPercentage,bufferSpeedPercent):
 def closeNoBuffer(fullSpeed):
     ch.setVelocityLimit(fullSpeed)
     ch.setPosition(0)
-    
+
 #DANGER, DISENGAGES STEPPER, WILL ALLOW TURNING BY PRESSURE FORCE
-    
+
 def UnlockValve(ch):
     ch.setEngaged(0)
 
 #Function activated by limit swtich detected, stops motor and does the burn
+
 def openDetected(ch,burntime,fullSpeed, bufferPercentage,bufferSpeedPercent):
     ch.setVelocityLimit(0)
     time.sleep(burntime)
     closeValve(ch,fullSpeed, bufferPercentage,bufferSpeedPercent)
-    
+
+#moves the valve open by 1 degree more
+
+def degOpen(ch,fullSpeed,bufferSpeedPercent):
+    print("Opening by one degree")
+    bufferSpeed = fullSpeed*(bufferSpeedPercent/100)
+    ch.setVelocityLimit(bufferSpeed)
+    #move one dgeree at buffer speed
+    ch.setTargetPosition(ch.getPosition()+1)
+
+#close valve by one degree
+
+def degClose(ch,fullSpeed,bufferSpeedPercent):
+    print("Closing by one degree")
+    bufferSpeed = fullSpeed*(bufferSpeedPercent/100)
+    ch.setVelocityLimit(bufferSpeed)
+    ch.setTargetPosition(ch.getPosition()-1)
+
 #Function activated by closed limit switch, stops motor
-def openDetected(ch):
+def closeDetected(ch):
     ch.setVelocityLimit(0)
     time.sleep(1)
-    
-    
