@@ -8,6 +8,8 @@ import  RPi.GPIO as GPIO
 
 #from test import *
 
+# unloaded maximum speed ~200
+
 class ValveControl():
 
     def __init__(self,pinCloseLimit,pinOpenLimit):
@@ -20,8 +22,8 @@ class ValveControl():
         #store reference to TestMain object
         #self.testMain = testMain
 
-        self.fullSpeed = 200
-        self.slowSpeed = 50
+        self.fullSpeed = 100
+        self.slowSpeed = 300
         self.slowAngle = 20
         self.fullOpenAngle =  90
         self.fullClosedAngle = 0
@@ -32,6 +34,8 @@ class ValveControl():
         self.bufferSpeed = 0
         self.bufferAmount = 0
         print("Valve control initialized")
+
+        self.abortSet = False
 
         self.ch = None
 
@@ -50,25 +54,26 @@ class ValveControl():
         self.ch = Stepper()
         try:       
             self.ch.setOnErrorHandler(self.onErrorEvent)            
-            #self.ch.setOnAttachHandler(self.onStepperAttached)
-            #self.ch.setOnDetachHandler(self.onStepperDetached)
+            self.ch.setOnAttachHandler(self.onStepperAttached)
+            self.ch.setOnDetachHandler(self.onStepperDetached)
             #self.ch.setOnPositionChangeHandler(self.onPositionChange)
 
             #self.ch.setDeviceSerialNumber(setSerialNum)
 
-            print("Waiting for the Phidget Stepper Object to be attached...")
+            #print("Waiting for the Phidget Stepper Object to be attached...")
             self.ch.openWaitForAttachment(5000)
 
-            print("Stepper attached! Resuming init...")
+            #print("Stepper attached! Resuming init...")
             self.ch.setRescaleFactor(self.rescale)   
-            self.ch.setVelocityLimit(self.fullSpeed)         
+            self.ch.setVelocityLimit(self.fullSpeed)  
+            self.ch.setCurrentLimit(1.8)       
             
             # Use CONTROL_MODE_RUN
             self.ch.setControlMode(1)
             self.ch.setEngaged(1)
             
             #self.ch.addPositionOffset(self.ch.getPosition())
-            print("Stepper object initialized!")
+            #print("Stepper object initialized!")
         except Exception as e:
             self.terminateValveControl("Phidget Exception " + str(e.code) + " " + e.details)
             
@@ -123,7 +128,10 @@ class ValveControl():
         try:
             print("\nDetach event on Port %d Channel %d" % (detached.getHubPort(), detached.getChannel()))
         except PhidgetException as e:
-            terminateValveControl("Phidget Exception " + str(e.code) + " " + e.details)
+            terminateValveControl("onStepperDetached! Phidget Exception " + str(e.code) + " " + e.details)
+        self.ch.close()
+        self.initStepper()
+        self.setVelocity(self.velocitySetting)
             
     def onErrorEvent(self, e, eCode, description):
         print("Error event #%i : %s" % (eCode, description))
@@ -136,32 +144,42 @@ class ValveControl():
 
     def openValve(self):
         #currPos = self.ch.getPosition()
-        self.ch.setVelocityLimit(self.slowSpeed)
+        if self.abortSet:
+            return
+        self.setVelocity(self.slowSpeed)
         #self.ch.setTargetPosition(self.fullOpenAngle)
 
-#        while currPos < self.fullOpenAngle and not self.openLimitHit():
-        while not self.openLimitHit():
+        while not self.openLimitHit() and not self.abortSet:
             #currPos = self.ch.getPosition()
-            #time.sleep(0.01)
-            pass  
-        self.ch.setVelocityLimit(0)
+            time.sleep(0.001)
+              
+        self.setVelocity(0)
 
+    def setVelocity(self, vel):
+        self.velocitySetting = vel
+        try:
+            self.ch.setVelocityLimit(vel)
+        except Exception as e:
+            print(str(e))
+        
     def closeValve(self):
         #currPos = self.ch.getPosition()
-        self.ch.setVelocityLimit(-self.slowSpeed)
+        
+        self.setVelocity(-self.slowSpeed)
         #self.ch.setTargetPosition(self.fullClosedAngle)
 
-#        while currPos > self.fullClosedAngle and not self.closeLimitHit():
         while not self.closeLimitHit():
             #currPos = self.ch.getPosition()
-            #time.sleep(0.01)
-            pass
-        self.ch.setVelocityLimit(0)
+            time.sleep(0.001)
+        
+        print("Close limit reached!")    
+        self.setVelocity(0)
         
     def __del__(self):
         if self.ch is not None:
             self.ch.setEngaged(0)
             self.ch.close()
+        GPIO.cleanup()
 
 
 # DANGER IGNORES BUFFERS, COULD DAMAGE LIMIT SWITCHES

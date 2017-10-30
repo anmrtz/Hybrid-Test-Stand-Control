@@ -19,15 +19,16 @@ valve = ValveControl(21,26)
 
 valve.initStepper()
 
-print("Opening valve")
-valve.openValve()
+for x in range(20):
+    #print("Opening valve")
+    valve.openValve()
 
-print("Waiting 4 seconds")
-time.sleep(4)
+    #print("Waiting 2 seconds")
+    time.sleep(1)
 
-print("Closing valve")
-valve.closeValve()
+    #print("Closing valve")
+    valve.closeValve()
 
-print("Test ended")
+    print("Test ended")
 
 
