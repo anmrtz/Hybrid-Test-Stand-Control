@@ -8,17 +8,18 @@ END_SERVER = False
 end_Server_lock = threading.Lock()
 
 def killServer(msg = "NO_ABORT_MSG"):
-	with end_test_lock:
-		global END_SERVER
-		if END_SERVER:
-			return
-		END_SERVER = True
-		print("Killing Server\n Reason: " + str(msg))
+    with end_test_lock:
+        global END_SERVER
+        if END_SERVER:
+            return
+        END_SERVER = True
+        print("Killing Server\n Reason: " + str(msg))
 
 
 class ControlServer():
     def __init__ (self):
         pass
+
     def startServer(self):
         self.sk = socket.socket()
         self.sk.setsockopt(socket.socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -30,27 +31,27 @@ class ControlServer():
         except: Exception as e:
             killServer(e)
             return
-       print('eth0 IP: ' + host)
-       port = 9999
-	   address = (host,port)
-       print('Starting Server on %s' % sys.version)
-       self.sk.bind(address)
-       self.sk.listen(5)
+        print('eth0 IP: ' + host)
+        port = 9999
+	    address = (host,port)
+        print('Starting Server on %s' % sys.version)
+        self.sk.bind(address)
+        self.sk.listen(5)
 
-       print("Connect control laptop")
+        print("Connect control laptop")
 
 		# wait for a new connection and pull settings data
-		try:
-			self.client, addr = self.sk.accept()
-			# the recieved message is stored in data
-			data = self.client.recv(1024)
-			data = data.decode('utf-8')
-		except Exception as e:
-			killServer(e)
-			return
-		except KeyboardInterrupt:
-			killServer("Keyboard interrupt")
-			return
+        try:
+            self.client, addr = self.sk.accept()
+            # the recieved message is stored in data
+            data = self.client.recv(1024)
+            data = data.decode('utf-8')
+        except Exception as e:
+            killServer(e)
+            return
+        except KeyboardInterrupt:
+            killServer("Keyboard interrupt")
+            return
         print ("Pi got " + data)
 
         signal.signal = (signal.SIGINT, self.handleKeyboardInt)
@@ -80,28 +81,28 @@ class ControlServer():
 
     #Background threaded process to ensure connection maintained
 
-	def checkConnection(self):
-		while not END_TEST:
-			time.sleep(0.5)
-			try:
-				# get eth0 status
-				f = os.popen('cat /sys/class/net/eth0/carrier')
-				eth0_active = int(f.read())
-				f.close()
-			except Exception as e:
-				endTest(e)
-				break
+    def checkConnection(self):
+        while not END_TEST:
+            time.sleep(0.5)
+            try:
+                # get eth0 status
+                f = os.popen('cat /sys/class/net/eth0/carrier')
+                eth0_active = int(f.read())
+                f.close()
+            except Exception as e:
+                endTest(e)
+                break
 
-			if not eth0_active:
-				endTest("Ethernet connection broken")
-		self.client.close()
+            if not eth0_active:
+                endTest("Ethernet connection broken")
+        self.client.close()
 
     def waitForOpen(self):
         OPEN_GIVEN = False
         while not OPEN_GIVEN:
             time.sleep(0.5)
             #grab data and check if it's the string 'OPEN'
-            check = self.client.recv(4)
+            check = self.client.recv(1024)
 			check = data.decode('utf-8')
             if data == "OPEN":
                 OPEN_GIVEN = True
@@ -113,7 +114,7 @@ class ControlServer():
         while not OPEN_GIVEN:
             time.sleep(0.5)
             #grab data and check if it's the string 'OPEN'
-            check = self.client.recv(4)
+            check = self.client.recv(1024)
     		check = data.decode('utf-8')
             if data == "ABORT":
                 ABORT_GIVEN = True
