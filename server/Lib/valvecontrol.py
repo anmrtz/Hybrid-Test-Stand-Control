@@ -18,7 +18,7 @@ class ValveControl():
         self.pinOpenLimit = pinOpenLimit
         GPIO.setup(self.pinCloseLimit, GPIO.IN,pull_up_down=GPIO.PUD_UP)
         GPIO.setup(self.pinOpenLimit, GPIO.IN,pull_up_down=GPIO.PUD_UP)
-        
+
         #store reference to TestMain object
         #self.testMain = testMain
 
@@ -33,11 +33,36 @@ class ValveControl():
         #Calcuated
         self.bufferSpeed = 0
         self.bufferAmount = 0
+        self.burn_duration
         print("Valve control initialized")
 
         self.abortSet = False
 
         self.ch = None
+
+#After
+
+    def loadSettings(self,settings):
+		if len(params) != 10:
+			endTest('Need 10 input parameters')
+			return
+		try:
+			#launch_code = int(params[0])
+			self.burn_duration = float(params[1])
+            #not used yet
+			#self.ignitor_timing = float(params[2])
+			#self.valve_open_timing = float(params[3])
+			#valve_closing_time = float(params[4])
+			self.bufferSpeedPercent = float(params[5])
+			self.bufferPercentage = float(params[6])
+
+            #These need to be modified according to opening methods (time v speed)
+		    self.fullSpeed= float(params[7])
+			self.slowSpeed = float(params[8])
+			self.slowAngle = float(params[9])
+        except:
+            print("Malformed passed data!")
+            return
 
     # Setup the Stepper object, takes serial as a value to set on
     def initStepper(self, setSerialNum = 0):#, setfullSpeed, setslowSpeed, setslowAngle, setfullOpen, setbufferPercentage, setbufferSpeedPercent):
@@ -52,8 +77,8 @@ class ValveControl():
         #self.bufferSpeed = fullSpeed*(bufferSpeedPercent/100)
 
         self.ch = Stepper()
-        try:       
-            self.ch.setOnErrorHandler(self.onErrorEvent)            
+        try:
+            self.ch.setOnErrorHandler(self.onErrorEvent)
             self.ch.setOnAttachHandler(self.onStepperAttached)
             self.ch.setOnDetachHandler(self.onStepperDetached)
             #self.ch.setOnPositionChangeHandler(self.onPositionChange)
@@ -64,19 +89,19 @@ class ValveControl():
             self.ch.openWaitForAttachment(5000)
 
             #print("Stepper attached! Resuming init...")
-            self.ch.setRescaleFactor(self.rescale)   
-            self.ch.setVelocityLimit(self.fullSpeed)  
-            self.ch.setCurrentLimit(1.8)       
-            
+            self.ch.setRescaleFactor(self.rescale)
+            self.ch.setVelocityLimit(self.fullSpeed)
+            self.ch.setCurrentLimit(1.8)
+
             # Use CONTROL_MODE_RUN
             self.ch.setControlMode(1)
             self.ch.setEngaged(1)
-            
+
             #self.ch.addPositionOffset(self.ch.getPosition())
             #print("Stepper object initialized!")
         except Exception as e:
             self.terminateValveControl("Phidget Exception " + str(e.code) + " " + e.details)
-            
+
     def closeLimitHit(self):
         return GPIO.input(self.pinCloseLimit) == 0
 
@@ -123,7 +148,7 @@ class ValveControl():
 
         except PhidgetException as e:
             self.terminateValveControl("Phidget Exception " + str(e.code) + " " + e.details)
-        
+
     def onStepperDetached(self, detached):
         try:
             print("\nDetach event on Port %d Channel %d" % (detached.getHubPort(), detached.getChannel()))
@@ -132,7 +157,7 @@ class ValveControl():
         self.ch.close()
         self.initStepper()
         self.setVelocity(self.velocitySetting)
-            
+
     def onErrorEvent(self, e, eCode, description):
         print("Error event #%i : %s" % (eCode, description))
         self.terminateValveControl("Phidgets onError raised")
@@ -152,7 +177,7 @@ class ValveControl():
         while not self.openLimitHit() and not self.abortSet:
             #currPos = self.ch.getPosition()
             time.sleep(0.001)
-              
+
         self.setVelocity(0)
 
     def setVelocity(self, vel):
@@ -161,20 +186,20 @@ class ValveControl():
             self.ch.setVelocityLimit(vel)
         except Exception as e:
             print(str(e))
-        
+
     def closeValve(self):
         #currPos = self.ch.getPosition()
-        
+
         self.setVelocity(-self.slowSpeed)
         #self.ch.setTargetPosition(self.fullClosedAngle)
 
         while not self.closeLimitHit():
             #currPos = self.ch.getPosition()
             time.sleep(0.001)
-        
-        print("Close limit reached!")    
+
+        print("Close limit reached!")
         self.setVelocity(0)
-        
+
     def __del__(self):
         if self.ch is not None:
             self.ch.setEngaged(0)
@@ -191,7 +216,7 @@ class ValveControl():
 #def UnlockValve():
 #    ch.setEngaged(0)
 #    GPIO.cleanup()
-    
+
 #def shutdown():
 #    ch.close()
 

@@ -1,4 +1,4 @@
-from valvecontrol import *
+from lib.valvecontrol import *
 import time
 import sys
 
@@ -30,5 +30,3 @@ for x in range(20):
     valve.closeValve()
 
     print("Test ended")
-
-
