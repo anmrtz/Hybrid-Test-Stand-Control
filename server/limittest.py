@@ -1,4 +1,4 @@
-import  RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 import time
 GPIO.setmode(GPIO.BCM)
 
@@ -15,7 +15,6 @@ def close_callback(channel):
     print ("closed detected by thread")
     print("Just stop the motor!")
            
-
 GPIO.add_event_detect(21,GPIO.FALLING, callback=close_callback,bouncetime=300)
 GPIO.add_event_detect(26,GPIO.FALLING, callback=open_callback,bouncetime=300)
 try :

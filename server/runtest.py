@@ -1,0 +1,3 @@
+from testmain import *
+
+serverStart()
