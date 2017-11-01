@@ -11,7 +11,9 @@ The test stand controllers run off a server-client mode of operation, with the P
 * Ethernet connection between client PC and Pi
 
 ### Libraries
-* The test stand runs using the Phidgets API, which is included in the repo, it can be downloaded seperately [Here](https://www.phidgets.com/docs/Language_-_Python#Libraries "Phidgets Python How-To") as well. 
+* The test stand runs using the Phidgets API, which is included in the repo, it can be downloaded seperately [Here](https://www.phidgets.com/docs/Language_-_Python#Libraries "Phidgets Python How-To") as well. \
+* The GUI runs on the PYQT framework. [Available here](https://www.riverbankcomputing.com/software/pyqt/download5) 
+* We also use libraries that come with the standard Pi OS, inluding PI.GPIO. If you wish to emulate the pi, you must find ways to also emulate these libraries.
 
 ## Usage
 **It is highly recommended you test the software on both ends before launch to ensure correct operation**\
