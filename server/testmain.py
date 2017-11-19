@@ -72,6 +72,7 @@ class TestMain:
 		if self.valveControl is None:
 			self.valveControl = ValveControl()
 			self.valveControl.initStepper()
+			self.valveControl.initEncoder()
 
 		# spawn a new thread to periodically check the connection with the new client
 		checkConnectThread = threading.Thread(target = self.checkConnection, args = ())
@@ -107,8 +108,14 @@ class TestMain:
 
 			# piggy-backing limit switch status messages on this thread
 			if self.valveControl is not None:
-				limit_switch_msg = "LIMIT" + " " + str(int(self.valveControl.openLimitHit())) + " " + str(int(self.valveControl.closeLimitHit()))
+				limit_switch_msg = "LIMIT " + str(int(self.valveControl.openLimitHit())) + " " + str(int(self.valveControl.closeLimitHit()))
 				self.client.sendall(limit_switch_msg.encode())
+				
+				encoder_position_msg = "ENCODER " + str(int(self.valveControl.motorPos))
+				self.client.sendall(encoder_position_msg.encode())
+				
+				ignitor_state_msg = "IGNITOR 0"
+				self.client.sendall(ignitor_state_msg.encode())
 			time.sleep(0.1)
 		print("checkConnection thread ended!")
 		
@@ -143,6 +150,8 @@ class TestMain:
 			elif params[0] == "ABORT":
 				self.sendMsgToClient("Abort received!")			
 				endTest("Client abort signal received!")
+				# force close the valve
+				self.valveControl.closeValve()
 			else:
 				self.sendMsgToClient("Invalid instruction received!")			
 				endTest("recvClientMsg invalid instruction: " + data)		
