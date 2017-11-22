@@ -4,7 +4,7 @@ import sys
 import time
 import os
 import signal
-
+import queue
 
 # global abort/end-of-test flag
 # consider placing this in TestMain...
@@ -28,9 +28,9 @@ class TestMain:
 	def __init__(self):	
 		self.valveControl = None
 		self.client = None
-		
-		self.motorBusy = False
-		self.busyLock = threading.Lock()
+		self.sock = None
+
+		self.instructionQueue = queue.Queue()
 
 	def initServer(self):
 
@@ -58,7 +58,6 @@ class TestMain:
 		# wait for a new connection
 		try:
 			self.client, addr = self.sock.accept()	
-			# the recieved message is stored in data
 		except Exception as e:
 			endTest(e)
 			return	
@@ -75,25 +74,70 @@ class TestMain:
 			self.valveControl.initEncoder()
 
 		# spawn a new thread to periodically check the connection with the new client
-		checkConnectThread = threading.Thread(target = self.checkConnection, args = ())
-		checkConnectThread.daemon = False 	
-		checkConnectThread.start()
+		checkStatusThread = threading.Thread(target = self.checkStatus, args = ())
+		checkStatusThread.daemon = False
+		checkStatusThread.start()
 
 		recvClientMsgThread = threading.Thread(target = self.recvClientMsg, args = ())
 		recvClientMsgThread.daemon = False 	
 		recvClientMsgThread.start()
-					
-		# keep main thread alive
-		while not END_TEST:
-			time.sleep(0.1)
+
+		while not testEnded():
+			try:
+				instruction = self.instructionQueue.get(True, 1)				
+				self.processInstruction(instruction)
+			except queue.Empty:
+				pass
+				
+		print("Main waiting for threads to clear...")
+				
+		self.clearInstructionQueue();
+
+		# wait for all dispatched threads to terminate gracefully...
+		checkStatusThread.join()
+		recvClientMsgThread.join()
+
+		self.client.close()
+		self.client = None
+
+		self.valveControl = None
+
 		print("Main thread ended!")
 
-	# periodically check for broken ethernet connection
-	def checkConnection(self):
-		while not END_TEST:
-			#print("Checking connection...")
+	def processInstruction(self, instruction):
+
+		params = instruction.split(' ')
+
+		if params[0] == "HEAD" and len(params) > 1:
+			self.sendMsgToClient("Initializing automated test...")
+			self.startAutoTest(params[1:])
+		elif params[0] == "VALVE" and len(params) == 2 and params[1] == "OPEN":
+			self.sendMsgToClient("Manually opening valve to limit switch...")
+			self.valveControl.moveValveToOpenLimit()
+		elif params[0] == "VALVE" and len(params) == 2 and params[1] == "CLOSE":
+			self.sendMsgToClient("Manually closing valve to limit switch...")
+			self.valveControl.moveValveToCloseLimit()
+		elif params[0] == "IGNITE":
+			self.sendMsgToClient("Toggling ignitor...")
+		elif params[0] == "CALIBRATE_ENCODER":
+			pass
+		elif params[0] == "ABORT":
+			self.sendMsgToClient("Abort received!")
+			endTest("Client abort signal received!")
+			# force close the valve
+			self.valveControl.moveValveToCloseLimit()
+		else:
+			self.sendMsgToClient("Invalid instruction received!")
+			endTest("Invalid instruction: " + data)
+
+	def clearInstructionQueue(self):
+		while not self.instructionQueue.empty():
+			self.instructionQue.get(False)
+
+	def checkStatus(self):
+		while not testEnded():
+			# periodically check for broken ethernet connection
 			try:
-				# get eth0 status
 				f = os.popen('cat /sys/class/net/eth0/carrier')
 				eth0_active = int(f.read())
 				f.close()			
@@ -103,25 +147,26 @@ class TestMain:
 
 			if not eth0_active:
 				endTest("Ethernet connection broken")
-				self.client.close()
 				break
 
-			# piggy-backing limit switch status messages on this thread
+			# send status information back to client
 			if self.valveControl is not None:
-				limit_switch_msg = "LIMIT " + str(int(self.valveControl.openLimitHit())) + " " + str(int(self.valveControl.closeLimitHit()))
-				self.client.sendall(limit_switch_msg.encode())
+				#limit_switch_msg = "LIMIT " + str(int(self.valveControl.openLimitHit())) + " " + str(int(self.valveControl.closeLimitHit()))
+				#self.sendMsgToClient(limit_switch_msg)
+				#encoder_position_msg = "ENCODER " + str(int(self.valveControl.motorPos))
+				#self.sendMsgToClient(encoder_position_msg)
+				#ignitor_state_msg = "IGNITOR 0"
+				#self.sendMsgToClient(ignitor_state_msg)
 				
-				encoder_position_msg = "ENCODER " + str(int(self.valveControl.motorPos))
-				self.client.sendall(encoder_position_msg.encode())
-				
-				ignitor_state_msg = "IGNITOR 0"
-				self.client.sendall(ignitor_state_msg.encode())
+				state_msg = "STATEALL " + str(int(self.valveControl.openLimitHit())) + " " + str(int(self.valveControl.closeLimitHit())) + " " + \
+					str(int(self.valveControl.encoder.getPosition())) + " " + "0"
+					
+				self.sendMsgToClient(state_msg)
 			time.sleep(0.1)
 		print("checkConnection thread ended!")
 		
 	def recvClientMsg(self):
-		# slice msg string for token + parameters
-		while not END_TEST:
+		while not testEnded():
 			try:
 				data = self.client.recv(1024)	
 			except Exception as e:
@@ -132,53 +177,16 @@ class TestMain:
 			if (data == ''):
 				endTest("recvClientMsg: Connection broken")
 				break
-			
-			params = data.split(' ')
-			token = params[0]
-		
-			if params[0] == "HEAD" and len(params) < 2:
-				self.sendMsgToClient("Starting automated test")
-#				self.startAutoTest(params[1:])
-			elif params[0] == "VALVE" and len(params) == 2 and params[1] == "OPEN":
-				self.sendMsgToClient("Manually opening valve")
-				self.fullValveArc(True)
-			elif params[0] == "VALVE" and len(params) == 2 and params[1] == "CLOSE":
-				self.sendMsgToClient("Manually closing valve")
-				self.fullValveArc(False)
-			elif params[0] == "IGNITE":
-				self.sendMsgToClient("Firing ignitor")			
-			elif params[0] == "ABORT":
-				self.sendMsgToClient("Abort received!")			
-				endTest("Client abort signal received!")
-				# force close the valve
-				self.valveControl.closeValve()
-			else:
-				self.sendMsgToClient("Invalid instruction received!")			
-				endTest("recvClientMsg invalid instruction: " + data)		
+			elif not testEnded():
+				self.instructionQueue.put(data)
+
 		print("recvClientMsg thread ended!")
-		
-	def _isMotorAvailable(self):
-		with self.busyLock:
-			if self.motorBusy:
-				return False
-			else:
-				self.motorBusy = True
-				return True
 
-	def fullValveArc(self, setToOpen):
-		if self._isMotorAvailable():
-			if setToOpen:
-				self.valveControl.openValve()
-			else:
-				self.valveControl.closeValve()			
-			self.motorBusy = False
-		else:
-			sendMsgToClient("MOTOR BUSY!")
-
-	# use this function to start the motor-controller test sequence - either directly or after parsing the initial client message
-	def autoTest(self, params):
+	# use this function to start the motor-controller test sequence
+	def startAutoTest(self, params):
+		print("Auto test parameters recieved: " + str(params))
 		if len(params) != 10:
-			endTest('Need 10 input parameters')
+			endTest("Need 10 input parameters for auto test")
 			return
 		try:
 			launch_code = int(params[0])
@@ -192,40 +200,58 @@ class TestMain:
 			total_opening_time = float(params[8])
 			initial_opening_time = float(params[9])
 		except Exception as e:
-			endTest(e)
+			self.sendMsgToClient("ERROR! Cannot start auto test: " + str(e))
 			return
-			
-		if self._isMotorAvailable():
-			sendMsgToClient("Running auto test")
-			# run motor code here
-			self.motorBusy = False
-		else:
-			sendMsgToClient("MOTOR BUSY!")
 		
+		self.valveControl.moveValveToCloseLimit()
+		self.valveControl.calibratePosition()
+		self.sendMsgToClient("Moving to buffer angle")
+		self.valveControl.moveToAngle(60,200)
+		self.sendMsgToClient("Moving slowly to open position")
+		self.valveControl.moveToAngle(90,100)
+		self.sendMsgToClient("Burning for " + str(burn_duration) + " seconds")
+		time.sleep(burn_duration)
+		self.sendMsgToClient("Closing valve")
+		self.valveControl.moveValveToCloseLimit()
+		
+		self.sendMsgToClient("Auto test ended")
+
 	def sendMsgToClient(self,msg):
 		if self.client is not None:
-			self.client.sendall(msg.encode())
-		print("To client: " + msg)
+			try:
+				self.client.sendall(msg.encode())
+			except Exception as e:
+				endTest(e)
 
 	# handle Ctrl-C
 	def handleKeyboardInt(self, signal, frame):
 		endTest("Keyboard interrupt")
-		
+		self.client.shutdown(socket.SHUT_WR)
+
 	def __del__(self):
 		if self.client is not None:
-			self.client.close()
+			try:
+				self.client.close()
+			except Exception as e:
+				print("Failed to close client: " + str(e))
 		if self.sock is not None:
-			self.sock.close()
-			
+			try:
+				self.sock.close()
+			except Exception as e:
+				print("Failed to close server: " + str(e))
+
 # start test directly from command line
-def terminalStart():
-	print("Starting terminal test...")
-	test = TestMain()
-	test.startTest(sys.argv[1:])
-	
+#def terminalStart():
+#	print("Starting terminal test...")
+#	test = TestMain()
+#	test.startTest(sys.argv[1:])
+
 # start test server and wait for connection
-def serverStart():
+def main():
 	print("Starting test server...")
 	test = TestMain()
 	test.initServer()
+	print("testmain ended")
 
+if __name__ == '__main__':
+	main()

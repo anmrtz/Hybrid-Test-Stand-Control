@@ -5,7 +5,7 @@ from Phidget22.Devices.Stepper import *
 from Phidget22.PhidgetException import *
 from Phidget22.Phidget import *
 from Phidget22.Net import *
-import  RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 
 from testmain import testEnded
 from testmain import endTest
@@ -13,33 +13,28 @@ from testmain import endTest
 class ValveControl():
 
 	_MAX_SPEED = 300
-	_DEFAULT_SPEED = 200
+	_DEFAULT_SPEED = 90
 	_RESCALE_FACTOR = 0.1125
+	_ENCODER_COUNT_PER_DEGREES = 300.0 / 90.0
+	_DEGREES_PER_ENCODER_COUNT = 90.0 / 300.0
 
-	def __init__(self, pinCloseLimit = 21, pinOpenLimit = 26, pinAlwaysClosedValve = 20, testMain = None):
+	def __init__(self, pinCloseLimit = 21, pinOpenLimit = 26, pinAlwaysClosedValve = 20, pinIgnitor = 16, testMain = None):
 		GPIO.setmode(GPIO.BCM)
 		self.pinCloseLimit = pinCloseLimit
 		self.pinOpenLimit = pinOpenLimit
+		self.pinIgnitor = pinIgnitor
 		GPIO.setup(self.pinCloseLimit, GPIO.IN,pull_up_down=GPIO.PUD_UP)
 		GPIO.setup(self.pinOpenLimit, GPIO.IN,pull_up_down=GPIO.PUD_UP)
+		#GPIO.setup(self.pinIgnitor, GPIO.OUT)
 		
 		#store reference to parent TestMain object
 		self.testMain = testMain
 
 		self.velocitySetting = 0
-		#self.slowAngle = 20
 		self.fullOpenAngle =  90
 		self.fullClosedAngle = 0
-		#self.bufferPercentage = 5
-		#self.bufferSpeedPercent = 10
-		#self.rescale = 0.1125
-		#Calcuated
-		#self.bufferSpeed = 0
-		#self.bufferAmount = 0
 		self.burn_duration = 0 
 		print("Valve control initialized")
-
-		#self.abortSet = False
 
 		assert ValveControl._MAX_SPEED > 0
 		assert ValveControl._DEFAULT_SPEED > 0
@@ -50,16 +45,7 @@ class ValveControl():
 		self.motorPos = 0
 
 	# Setup the Stepper object, takes serial as a value to set on
-	def initStepper(self):#, setfullSpeed, setslowSpeed, setslowAngle, setfullOpen, setbufferPercentage, setbufferSpeedPercent):
-		#self.fullSpeed = setfullSpeed
-		#self.slowSpeed = setslowSpeed
-		#self.slowAngle = setslowAngle
-		#self.fullOpen = setfullOpen
-		#self.bufferPercentage = setbufferPercentage
-		#self.bufferSpeedPercent = setbufferSpeedPercent
-		#Buffer calculations
-		#self.bufferAmount = 90*(bufferPercentage/100)
-		#self.bufferSpeed = fullSpeed*(bufferSpeedPercent/100)
+	def initStepper(self):
 
 		self.stepper = Stepper()
 		try:       
@@ -80,8 +66,6 @@ class ValveControl():
 			self.stepper.setControlMode(1)
 			self.stepper.setEngaged(1)
 			
-			#self.stepper.addPositionOffset(self.stepper.getPosition())
-			#print("Stepper object initialized!")
 		except Exception as e:
 			self.terminateValveControl("Phidget Exception " + str(e.code) + " " + e.details)
 	
@@ -141,10 +125,11 @@ class ValveControl():
 				
 
 	def onPositionChanged(self, e, positionChange, timeChange, indexTriggered):
-		self.motorPos = self.encoder.getPosition()
-		#curr_pos = ch.getPosition() 
-		#print("Position Changed: %7d %7d  %7.3lf  %d\n" % (curr_pos, positionChange, timeChange, indexTriggered))	
-	
+		pass
+		
+	def calibratePosition(self, position = 0):
+		self.encoder.setPosition(position)
+		
 	def loadSettings(self,settings):
 		if len(params) != 10:
 			endTest('Need 10 input parameters')
@@ -211,19 +196,23 @@ class ValveControl():
 		print("Error event #%i : %s" % (eCode, description))
 		self.terminateValveControl("Phidgets onError raised")
 
-	def openValve(self):
-		#currPos = self.stepper.getPosition()
-		if testEnded():
-			return
-		self.setVelocity(ValveControl._DEFAULT_SPEED)
-		#self.stepper.setTargetPosition(self.fullOpenAngle)
-
-		while not self.openLimitHit() and not testEnded():
-			#currPos = self.stepper.getPosition()
-			time.sleep(0.001)
-			  
+	def moveByAngle(self, angleDegrees, velocity):
+		encoderTarget = self.encoder.getPosition() + (angleDegrees * ValveControl._ENCODER_COUNT_PER_DEGREES)
+		#towards closed position
+		if (angleDegrees < 0):
+			self.setVelocity(-velocity)
+			while self.encoder.getPosition() > encoderTarget and not self.closeLimitHit() and not testEnded():
+				time.sleep(0.001)
+		#towards open position
+		elif (angleDegrees > 0):
+			self.setVelocity(velocity)
+			while self.encoder.getPosition() < encoderTarget and not self.openLimitHit() and not testEnded():
+				time.sleep(0.001)
 		self.setVelocity(0)
-		#print("Finished opening!")
+		
+	def moveToAngle(self, targetAngleDegrees, velocity):
+		travelDistance = targetAngleDegrees - (self.encoder.getPosition() *  ValveControl._DEGREES_PER_ENCODER_COUNT)
+		self.moveByAngle(travelDistance, velocity)
 
 	def setVelocity(self, vel):
 		assert abs(vel) <= ValveControl._MAX_SPEED
@@ -232,27 +221,22 @@ class ValveControl():
 			self.stepper.setVelocityLimit(vel)
 		except Exception as e:
 			print(str(e))
-		
-	def closeValve(self):
-		#currPos = self.stepper.getPosition()
-		
-		self.setVelocity(-ValveControl._DEFAULT_SPEED)
-		#self.stepper.setTargetPosition(self.fullClosedAngle)
 
-		while not self.closeLimitHit():
-			#currPos = self.stepper.getPosition()
-			time.sleep(0.001)
-			
+	def moveValveToOpenLimit(self):
+		if testEnded():
+			return
+		self.setVelocity(ValveControl._DEFAULT_SPEED)
+
+		while not self.openLimitHit() and not testEnded():
+			time.sleep(0.001)			  
 		self.setVelocity(0)
-		#print("Finished closing!")
 		
+	def moveValveToCloseLimit(self):
+		self.setVelocity(-ValveControl._DEFAULT_SPEED)
+		while not self.closeLimitHit():
+			time.sleep(0.001)			
+		self.setVelocity(0)
+
 	def __del__(self):
-		if self.stepper is not None:
-			self.stepper.setEngaged(0)
-			self.stepper.close()
-
-		if self.encoder is not None:
-			self.encoder.close()
-
 		GPIO.cleanup()
 

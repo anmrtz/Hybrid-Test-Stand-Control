@@ -27,18 +27,30 @@ class ReceiveThread(QtCore.QThread):
 	def run(self):
 		self.msg_received.emit('\nStarting receive thread...')
 		while True:
-			try:
-				server_response = self.sock.recv(4096)
+			try:				
+				server_response = self.sock.recv(1024)
 			except Exception as e:
-				self.msg_received.emit('\nReceive thread failed: %s' % str(e))
-				break
+				self.conn_lost.emit('\nReceive thread failed: %s' % str(e))
+				return
 			msg = str(server_response, "utf-8")
 			if (msg == ''):
 				self.conn_lost.emit('\nReceive thread connection lost!')
-				break
+				return
 
 			tokens = msg.split()
-			if (tokens[0] == 'LIMIT'):
+			if (tokens[0] == "STATEALL"):
+				try:
+					switch_open = tokens[1] == "1"
+					switch_closed = tokens[2] == "1"
+					encoder_val = int(tokens[3])
+					ignitor_on = tokens[4] == "1"
+					self.limit_state_received.emit(switch_open,switch_closed)
+					self.ignitor_state_received.emit(ignitor_on)
+					self.encoder_position_received.emit(encoder_val)
+					#self.msg_received.emit('\nFrom server: %s' % msg)
+				except Exception as e:
+					self.msg_received.emit('\nInvalid state token: ' + str(e))
+			elif (tokens[0] == "LIMIT"):
 				try:
 					switch_open = tokens[1] == "1"
 					switch_closed = tokens[2] == "1"
@@ -271,12 +283,12 @@ class App(QMainWindow):
 		self.connect.clicked.connect(self.set_connection)
 
 		#submit button
-		self.submit = QPushButton('Auto Test', self)
-		self.submit.setToolTip('You can only submit after the connection has been successfully established')
-		self.submit.resize(80,40)
-		self.submit.move(200, 570)
-		self.submit.clicked.connect(self.submit_data)
-		self.submit.setEnabled(False)
+		self.auto_test = QPushButton('Auto Test', self)
+		self.auto_test.setToolTip('You can only submit after the connection has been successfully established')
+		self.auto_test.resize(80,40)
+		self.auto_test.move(200, 570)
+		self.auto_test.clicked.connect(self.submit_data)
+		self.auto_test.setEnabled(False)
 
 		#DISCONNECT button
 		self.disconnect = QPushButton('Disconnect', self)
@@ -346,7 +358,7 @@ class App(QMainWindow):
 
 			self.connect.setEnabled(False)
 			#self.disconnect.setEnabled(True)
-			#self.submit.setEnabled(True)
+			self.auto_test.setEnabled(True)
 			#self.ignitor.setEnabled(True)
 			self.abort.setEnabled(True)
 			self.open_valve.setEnabled(True)
@@ -368,15 +380,16 @@ class App(QMainWindow):
 		total_opening_time = self.total_opening_time_box.text()
 		initial_opening_time = self.initial_opening_time_box.text()
 
-		engine_data = "HEAD " + launch_code + " " + burn_duration + " " + ignitor_timing + " " + valve_open_timing + " " + valve_closing_time + " " + limit_switch_slowdown + " " + angle_limit_switch_slowdown + " " + opening_profile_angle_delimiter + " " + total_opening_time + " " + initial_opening_time
-
+		engine_data = "HEAD " + launch_code + " " + burn_duration + " " + ignitor_timing + " " + valve_open_timing + " " + valve_closing_time + " " + \
+			limit_switch_slowdown + " " + angle_limit_switch_slowdown + " " + opening_profile_angle_delimiter + " " + total_opening_time + " " + \
+			initial_opening_time
 
 		try:
-			self.sock.sendall(self.engine_data.encode())
+			self.sock.sendall(engine_data.encode())
 		except Exception as e:
 			self.status_box.appendPlainText("Problem: " + str(e))
 			return
-		self.submit.setEnabled(False)
+		#self.auto_test.setEnabled(False)
 		self.abort.setEnabled(True)
 		self.ignitor.setEnabled(True)
 		self.open_valve.setEnabled(True)
@@ -386,7 +399,7 @@ class App(QMainWindow):
 
 		
 	def set_disconnect(self):
-		on_conn_lost("Disconnected")
+		self.on_conn_lost("Disconnected")
 
 	#abort
 	def abortion(self):
@@ -446,8 +459,10 @@ class App(QMainWindow):
 		self.status_box.appendPlainText(msg)
 		self.set_all_indicator_buttons("Unknown", "background-color: gray")
 		self.encoder_position.setText("Unknown")
-		self.sock.close()
-		self.sock = None
+		
+		if self.sock is not None:
+			self.sock.close()
+			self.sock = None
 
 		self.connect.setEnabled(True)
 		self.disconnect.setEnabled(False)
@@ -456,6 +471,7 @@ class App(QMainWindow):
 		self.ignitor.setEnabled(False)
 		self.open_valve.setEnabled(False)
 		self.close_valve.setEnabled(False)
+		self.auto_test.setEnabled(False)
 
 		self.receiver = None
 

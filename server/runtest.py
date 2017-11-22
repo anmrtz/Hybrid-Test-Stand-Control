@@ -1,3 +1,0 @@
-from testmain import *
-
-serverStart()

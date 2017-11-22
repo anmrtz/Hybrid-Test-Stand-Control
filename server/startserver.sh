@@ -1,1 +1,1 @@
-python3 runtest.py
+python3 testmain.py
