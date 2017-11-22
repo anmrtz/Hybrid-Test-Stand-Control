@@ -359,7 +359,7 @@ class App(QMainWindow):
 			self.connect.setEnabled(False)
 			#self.disconnect.setEnabled(True)
 			self.auto_test.setEnabled(True)
-			#self.ignitor.setEnabled(True)
+			self.ignitor.setEnabled(True)
 			self.abort.setEnabled(True)
 			self.open_valve.setEnabled(True)
 			self.close_valve.setEnabled(True)
@@ -390,13 +390,6 @@ class App(QMainWindow):
 			self.status_box.appendPlainText("Problem: " + str(e))
 			return
 		#self.auto_test.setEnabled(False)
-		self.abort.setEnabled(True)
-		self.ignitor.setEnabled(True)
-		self.open_valve.setEnabled(True)
-		self.close_valve.setEnabled(True)
-		self.close_valve.setEnabled(True)
-		self.close_valve.setEnabled(True)
-
 		
 	def set_disconnect(self):
 		self.on_conn_lost("Disconnected")

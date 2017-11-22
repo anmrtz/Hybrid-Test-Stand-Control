@@ -20,12 +20,16 @@ class ValveControl():
 
 	def __init__(self, pinCloseLimit = 21, pinOpenLimit = 26, pinAlwaysClosedValve = 20, pinIgnitor = 16, testMain = None):
 		GPIO.setmode(GPIO.BCM)
+
 		self.pinCloseLimit = pinCloseLimit
-		self.pinOpenLimit = pinOpenLimit
-		self.pinIgnitor = pinIgnitor
 		GPIO.setup(self.pinCloseLimit, GPIO.IN,pull_up_down=GPIO.PUD_UP)
+
+		self.pinOpenLimit = pinOpenLimit
 		GPIO.setup(self.pinOpenLimit, GPIO.IN,pull_up_down=GPIO.PUD_UP)
-		#GPIO.setup(self.pinIgnitor, GPIO.OUT)
+		
+		self.pinIgnitor = pinIgnitor
+		GPIO.setup(self.pinIgnitor, GPIO.OUT)
+		self.ignitorActiveFlag = False
 		
 		#store reference to parent TestMain object
 		self.testMain = testMain
@@ -237,6 +241,13 @@ class ValveControl():
 			time.sleep(0.001)			
 		self.setVelocity(0)
 
+	def setIgnitor(self, active):
+		self.ignitorActiveFlag = active
+		GPIO.output(self.pinIgnitor, self.ignitorActiveFlag)
+		
+	def ignitorActive(self):
+		return self.ignitorActiveFlag
+		
 	def __del__(self):
 		GPIO.cleanup()
 

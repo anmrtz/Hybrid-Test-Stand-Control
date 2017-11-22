@@ -119,6 +119,7 @@ class TestMain:
 			self.valveControl.moveValveToCloseLimit()
 		elif params[0] == "IGNITE":
 			self.sendMsgToClient("Toggling ignitor...")
+			self.valveControl.setIgnitor(not self.valveControl.ignitorActive())
 		elif params[0] == "CALIBRATE_ENCODER":
 			pass
 		elif params[0] == "ABORT":
@@ -159,7 +160,7 @@ class TestMain:
 				#self.sendMsgToClient(ignitor_state_msg)
 				
 				state_msg = "STATEALL " + str(int(self.valveControl.openLimitHit())) + " " + str(int(self.valveControl.closeLimitHit())) + " " + \
-					str(int(self.valveControl.encoder.getPosition())) + " " + "0"
+					str(int(self.valveControl.encoder.getPosition())) + " " + str(int(self.valveControl.ignitorActive()))
 					
 				self.sendMsgToClient(state_msg)
 			time.sleep(0.1)
@@ -209,8 +210,10 @@ class TestMain:
 		self.valveControl.moveToAngle(60,200)
 		self.sendMsgToClient("Moving slowly to open position")
 		self.valveControl.moveToAngle(90,100)
+		self.valveControl.setIgnitor(True)
 		self.sendMsgToClient("Burning for " + str(burn_duration) + " seconds")
 		time.sleep(burn_duration)
+		self.valveControl.setIgnitor(False)
 		self.sendMsgToClient("Closing valve")
 		self.valveControl.moveValveToCloseLimit()
 		
