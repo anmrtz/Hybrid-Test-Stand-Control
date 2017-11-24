@@ -7,6 +7,7 @@
 #required libraries
 import sys
 import socket
+import re
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import *
@@ -23,6 +24,7 @@ class ReceiveThread(QtCore.QThread):
 	def __init__(self, sock):
 		QtCore.QThread.__init__(self)
 		self.sock = sock
+		self.charStream = ''
 
 	def run(self):
 		self.msg_received.emit('\nStarting receive thread...')
@@ -37,40 +39,51 @@ class ReceiveThread(QtCore.QThread):
 				self.conn_lost.emit('\nReceive thread connection lost!')
 				return
 
-			tokens = msg.split()
-			if (tokens[0] == "STATEALL"):
-				try:
-					switch_open = tokens[1] == "1"
-					switch_closed = tokens[2] == "1"
-					encoder_val = int(tokens[3])
-					ignitor_on = tokens[4] == "1"
-					self.limit_state_received.emit(switch_open,switch_closed)
-					self.ignitor_state_received.emit(ignitor_on)
-					self.encoder_position_received.emit(encoder_val)
-					#self.msg_received.emit('\nFrom server: %s' % msg)
-				except Exception as e:
-					self.msg_received.emit('\nInvalid state token: ' + str(e))
-			elif (tokens[0] == "LIMIT"):
-				try:
-					switch_open = tokens[1] == "1"
-					switch_closed = tokens[2] == "1"
-					self.limit_state_received.emit(switch_open,switch_closed)
-				except Exception as e:
-					self.msg_received.emit('\nInvalid limit switch token: ' + str(e))
-			elif (tokens[0] == "IGNITOR"):
-				try:
-					ignitor_on = tokens[1] == "1"
-					self.ignitor_state_received.emit(ignitor_on)
-				except Exception as e:
-					self.msg_received.emit('\nInvalid ignitor state token: ' + str(e))
-			elif (tokens[0] == "ENCODER"):
-				try:
-					encoder_val = int(tokens[1])
-					self.encoder_position_received.emit(encoder_val)
-				except Exception as e:
-					self.msg_received.emit('\nInvalid encoder state token: ' + str(e))
-			else:
-				self.msg_received.emit('\nFrom server: %s' % msg)
+			self.charStream += msg
+
+			while True:
+				a = re.search(r'\b(END)\b', self.charStream)
+				if a is None:
+					break
+						
+				instruction = self.charStream[:a.start()]
+				self.charStream = self.charStream[a.start()+3:]
+			
+				tokens = instruction.split()
+			
+				if (tokens[0] == "STATEALL"):
+					try:
+						switch_open = tokens[1] == "1"
+						switch_closed = tokens[2] == "1"
+						encoder_val = int(tokens[3])
+						ignitor_on = tokens[4] == "1"
+						self.limit_state_received.emit(switch_open,switch_closed)
+						self.ignitor_state_received.emit(ignitor_on)
+						self.encoder_position_received.emit(encoder_val)
+						#self.msg_received.emit('\nFrom server: %s' % msg)
+					except Exception as e:
+						self.msg_received.emit('\nInvalid state token: ' + str(e))
+				elif (tokens[0] == "LIMIT"):
+					try:
+						switch_open = tokens[1] == "1"
+						switch_closed = tokens[2] == "1"
+						self.limit_state_received.emit(switch_open,switch_closed)
+					except Exception as e:
+						self.msg_received.emit('\nInvalid limit switch token: ' + str(e))
+				elif (tokens[0] == "IGNITOR"):
+					try:
+						ignitor_on = tokens[1] == "1"
+						self.ignitor_state_received.emit(ignitor_on)
+					except Exception as e:
+						self.msg_received.emit('\nInvalid ignitor state token: ' + str(e))
+				elif (tokens[0] == "ENCODER"):
+					try:
+						encoder_val = int(tokens[1])
+						self.encoder_position_received.emit(encoder_val)
+					except Exception as e:
+						self.msg_received.emit('\nInvalid encoder state token: ' + str(e))
+				else:
+					self.msg_received.emit('\nFrom server: %s' % instruction)
 
 #The main class containing our app
 class App(QMainWindow):
@@ -87,7 +100,7 @@ class App(QMainWindow):
 		self.ip_box.move(130, 20)
 		self.ip_box.resize(230,30)
 		self.ip_box.setPlaceholderText("IP address")
-		self.ip_box.setText("10.42.0.199")
+		self.ip_box.setText("10.42.0.209")
 		#----accompanying label
 		self.ip_label = QLabel(self)
 		self.ip_label.setText("IP ADDRESS ")
@@ -384,8 +397,12 @@ class App(QMainWindow):
 			limit_switch_slowdown + " " + angle_limit_switch_slowdown + " " + opening_profile_angle_delimiter + " " + total_opening_time + " " + \
 			initial_opening_time
 
+		if len(engine_data.split()) != 11:
+			self.on_msg_received("Auto test error: need 10 parameters\n")
+			return
+
 		try:
-			self.sock.sendall(engine_data.encode())
+			self.send_to_server(engine_data)
 		except Exception as e:
 			self.status_box.appendPlainText("Problem: " + str(e))
 			return
@@ -396,19 +413,19 @@ class App(QMainWindow):
 
 	#abort
 	def abortion(self):
-		self.sock.sendall("ABORT".encode())
+		self.send_to_server("ABORT")
 
 	#open valve
 	def valve_opener(self):
-		self.sock.sendall("VALVE OPEN".encode())
+		self.send_to_server("VALVE OPEN")
 
 	#ignition
 	def ignition(self):
-		self.sock.sendall("IGNITE".encode())
+		self.send_to_server("IGNITE")
 
 	#valve closing
 	def valve_closer(self):
-		self.sock.sendall("VALVE CLOSE".encode())
+		self.send_to_server("VALVE CLOSE")
 
 	def on_msg_received(self, msg):
 		self.status_box.appendPlainText(msg)
@@ -447,6 +464,14 @@ class App(QMainWindow):
 
 		self.ignitor_indicator.setText(msg)
 		self.ignitor_indicator.setStyleSheet(color)
+
+	def send_to_server(self, msg):
+		msg += ' END\n'
+		if self.sock is not None:
+			try:
+				self.sock.sendall(msg.encode())
+			except Exception as e:
+				print("Send to server failed: " + str(e))
 
 	def on_conn_lost(self, msg):
 		self.status_box.appendPlainText(msg)

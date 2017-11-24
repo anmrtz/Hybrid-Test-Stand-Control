@@ -5,6 +5,7 @@ import time
 import os
 import signal
 import queue
+import re
 
 # global abort/end-of-test flag
 # consider placing this in TestMain...
@@ -31,6 +32,7 @@ class TestMain:
 		self.sock = None
 
 		self.instructionQueue = queue.Queue()
+		self.charStream = ''
 
 	def initServer(self):
 
@@ -64,7 +66,6 @@ class TestMain:
 		except KeyboardInterrupt:
 			endTest("Keyboard interrupt")
 			return	
-
 
 		signal.signal(signal.SIGINT, self.handleKeyboardInt)
 
@@ -106,7 +107,7 @@ class TestMain:
 
 	def processInstruction(self, instruction):
 
-		params = instruction.split(' ')
+		params = instruction.split()
 
 		if params[0] == "HEAD" and len(params) > 1:
 			self.sendMsgToClient("Initializing automated test...")
@@ -129,7 +130,7 @@ class TestMain:
 			self.valveControl.moveValveToCloseLimit()
 		else:
 			self.sendMsgToClient("Invalid instruction received!")
-			endTest("Invalid instruction: " + data)
+			endTest("Invalid instruction: " + instruction + '|')
 
 	def clearInstructionQueue(self):
 		while not self.instructionQueue.empty():
@@ -163,7 +164,7 @@ class TestMain:
 					str(int(self.valveControl.encoder.getPosition())) + " " + str(int(self.valveControl.ignitorActive()))
 					
 				self.sendMsgToClient(state_msg)
-			time.sleep(0.1)
+			time.sleep(0.02)
 		print("checkConnection thread ended!")
 		
 	def recvClientMsg(self):
@@ -179,7 +180,17 @@ class TestMain:
 				endTest("recvClientMsg: Connection broken")
 				break
 			elif not testEnded():
-				self.instructionQueue.put(data)
+				self.charStream += data
+			
+				while True:
+					a = re.search(r'\b(END)\b', self.charStream)
+					if a is None:
+						break
+
+					instruction = self.charStream[:a.start()]
+					self.charStream = self.charStream[a.start()+3:]
+			
+					self.instructionQueue.put(instruction)
 
 		print("recvClientMsg thread ended!")
 
@@ -220,6 +231,7 @@ class TestMain:
 		self.sendMsgToClient("Auto test ended")
 
 	def sendMsgToClient(self,msg):
+		msg += ' END\n'
 		if self.client is not None:
 			try:
 				self.client.sendall(msg.encode())
@@ -242,12 +254,6 @@ class TestMain:
 				self.sock.close()
 			except Exception as e:
 				print("Failed to close server: " + str(e))
-
-# start test directly from command line
-#def terminalStart():
-#	print("Starting terminal test...")
-#	test = TestMain()
-#	test.startTest(sys.argv[1:])
 
 # start test server and wait for connection
 def main():
