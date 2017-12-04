@@ -12,8 +12,8 @@ from testmain import endTest
 
 class ValveControl():
 
-	_MAX_SPEED = 300
-	_DEFAULT_SPEED = 90
+	_MAX_SPEED = 360
+	_DEFAULT_SPEED = 180
 	_RESCALE_FACTOR = 0.1125
 	_ENCODER_COUNT_PER_DEGREES = 300.0 / 90.0
 	_DEGREES_PER_ENCODER_COUNT = 90.0 / 300.0
@@ -47,6 +47,7 @@ class ValveControl():
 		self.stepper = None
 		self.encoder = None
 		self.motorPos = 0
+		self.defaultVelocity = ValveControl._DEFAULT_SPEED
 
 	# Setup the Stepper object, takes serial as a value to set on
 	def initStepper(self):
@@ -229,14 +230,14 @@ class ValveControl():
 	def moveValveToOpenLimit(self):
 		if testEnded():
 			return
-		self.setVelocity(ValveControl._DEFAULT_SPEED)
+		self.setVelocity(self.defaultVelocity)
 
 		while not self.openLimitHit() and not testEnded():
 			time.sleep(0.001)			  
 		self.setVelocity(0)
 		
 	def moveValveToCloseLimit(self):
-		self.setVelocity(-ValveControl._DEFAULT_SPEED)
+		self.setVelocity(-self.defaultVelocity)
 		while not self.closeLimitHit():
 			time.sleep(0.001)			
 		self.setVelocity(0)
@@ -250,4 +251,9 @@ class ValveControl():
 		
 	def __del__(self):
 		GPIO.cleanup()
-
+		if (self.stepper is not None):
+			try:
+				self.setVelocity(0)
+				self.stepper.setEngaged(0)
+			except Exception:
+				print("Failed to deactive stepper")

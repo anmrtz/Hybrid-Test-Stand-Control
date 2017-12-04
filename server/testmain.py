@@ -134,14 +134,15 @@ class TestMain:
 
 	def clearInstructionQueue(self):
 		while not self.instructionQueue.empty():
-			self.instructionQue.get(False)
+			self.instructionQueue.get(False)
 
 	def checkStatus(self):
 		while not testEnded():
 			# periodically check for broken ethernet connection
 			try:
 				f = os.popen('cat /sys/class/net/eth0/carrier')
-				eth0_active = int(f.read())
+				eth0_active = bool(f.read())
+				#print("Eth0: " + str(eth0_active))
 				f.close()			
 			except Exception as e:
 				endTest(e)
@@ -160,10 +161,14 @@ class TestMain:
 				#ignitor_state_msg = "IGNITOR 0"
 				#self.sendMsgToClient(ignitor_state_msg)
 				
-				state_msg = "STATEALL " + str(int(self.valveControl.openLimitHit())) + " " + str(int(self.valveControl.closeLimitHit())) + " " + \
-					str(int(self.valveControl.encoder.getPosition())) + " " + str(int(self.valveControl.ignitorActive()))
-					
-				self.sendMsgToClient(state_msg)
+				try:
+					state_msg = "STATEALL " + str(int(self.valveControl.openLimitHit())) + " " + str(int(self.valveControl.closeLimitHit())) + " " + \
+						str(int(self.valveControl.encoder.getPosition())) + " " + str(int(self.valveControl.ignitorActive())) + " " + \
+						str(float(self.valveControl.defaultVelocity)) + " " + str(float(self.valveControl.stepper.getVelocity()))
+				except Exception as e:
+					print("Status send error: " + str(e))
+				else:
+					self.sendMsgToClient(state_msg)
 			time.sleep(0.02)
 		print("checkConnection thread ended!")
 		
@@ -203,8 +208,8 @@ class TestMain:
 		try:
 			launch_code = int(params[0])
 			burn_duration = float(params[1]) 
-			ignitor_timing = float(params[2])
-			valve_open_timing = float(params[3])
+			ignitor_delay = float(params[2])
+			valve_opening_time = float(params[3])
 			valve_closing_time = float(params[4])
 			limit_switch_slowdown_speed = float(params[5])
 			angle_limit_switch_slowdown_mode = float(params[6])
@@ -217,16 +222,35 @@ class TestMain:
 		
 		self.valveControl.moveValveToCloseLimit()
 		self.valveControl.calibratePosition()
-		self.sendMsgToClient("Moving to buffer angle")
-		self.valveControl.moveToAngle(60,200)
-		self.sendMsgToClient("Moving slowly to open position")
-		self.valveControl.moveToAngle(90,100)
+		#self.sendMsgToClient("Moving to buffer angle")
+		#self.valveControl.moveToAngle(60,200)
+		try:
+			open_velocity = 90.0 / valve_opening_time
+			close_velocity = 90.0 / valve_closing_time
+			if (open_velocity > ValveControl._MAX_SPEED or open_velocity <= 0.0):
+				raise Exception('Specified valve open time results in out of range speed!')
+			if (close_velocity > ValveControl._MAX_SPEED or close_velocity <= 0.0):
+				raise Exception('Specified valve close time results in out of range speed!')
+			if (burn_duration < 0.0):
+				raise Exception('Invalid burn duration time!')
+			if (ignitor_delay < 0.0):
+				raise Exception('Invalid burn delay!')
+		except Exception as e:
+			self.sendMsgToClient("Auto test error:" + str(e))
+			self.valveControl.moveValveToCloseLimit()
+			return
+
+		self.sendMsgToClient("Activating ignitor and waiting for " + str(ignitor_delay) + " seconds")
 		self.valveControl.setIgnitor(True)
+		time.sleep(ignitor_delay)
+		self.sendMsgToClient("Moving to open position")
+		self.valveControl.moveToAngle(90,open_velocity)
 		self.sendMsgToClient("Burning for " + str(burn_duration) + " seconds")
 		time.sleep(burn_duration)
-		self.valveControl.setIgnitor(False)
 		self.sendMsgToClient("Closing valve")
-		self.valveControl.moveValveToCloseLimit()
+		#self.valveControl.moveValveToCloseLimit()
+		self.valveControl.moveToAngle(0,close_velocity)
+		self.valveControl.setIgnitor(False)
 		
 		self.sendMsgToClient("Auto test ended")
 
