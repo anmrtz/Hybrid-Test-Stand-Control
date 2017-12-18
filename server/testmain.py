@@ -98,6 +98,7 @@ class TestMain:
 		checkStatusThread.join()
 		recvClientMsgThread.join()
 
+		print("Closing client connection...")
 		self.client.close()
 		self.client = None
 
@@ -109,30 +110,46 @@ class TestMain:
 
 		params = instruction.split()
 
-		if params[0] == "HEAD" and len(params) > 1:
+		if params[0] == "AUTO_TEST_PARAMS" and len(params) > 1:
 			self.sendMsgToClient("Initializing automated test...")
 			self.startAutoTest(params[1:])
-		elif params[0] == "VALVE" and len(params) == 2 and params[1] == "OPEN":
+		elif params[0] == "MEV" and len(params) == 2 and params[1] == "OPEN":
 			self.sendMsgToClient("Manually opening valve to limit switch...")
 			self.valveControl.moveValveToOpenLimit()
-		elif params[0] == "VALVE" and len(params) == 2 and params[1] == "CLOSE":
+		elif params[0] == "MEV" and len(params) == 2 and params[1] == "CLOSE":
 			self.sendMsgToClient("Manually closing valve to limit switch...")
 			self.valveControl.moveValveToCloseLimit()
-		elif params[0] == "IGNITE":
+		elif params[0] == "IGNITOR":
 			self.sendMsgToClient("Toggling ignitor...")
 			self.valveControl.setIgnitor(not self.valveControl.ignitorActive())
+		elif params[0] == "VENT_VALVE":
+			self.sendMsgToClient("Toggling vent valve...")
+			self.valveControl.setVentValve(not self.valveControl.ventValveActive())
+		elif params[0] == "NC_VALVE":
+			self.sendMsgToClient("Toggling NC valve...")
+			self.valveControl.setNCValve(not self.valveControl.NCValveActive())
+		elif params[0] == "DEFAULT_VEL" and len(params) == 2:
+			try:
+				new_default_vel = int(params[1])
+			except:
+				self.sendMsgToClient("Set default velocity error: invalid integer parameter")
+				return
+			self.sendMsgToClient("Setting default velocity to " + params[1] + " deg/s...")
+			set_result = self.valveControl.setDefaultVelocity(new_default_vel)
+			self.sendMsgToClient(set_result)
 		elif params[0] == "CALIBRATE_ENCODER":
-			pass
+			self.sendMsgToClient("Calibrating encoder...")	
 		elif params[0] == "ABORT":
 			self.sendMsgToClient("Abort received!")
 			endTest("Client abort signal received!")
 			# force close the valve
-			self.valveControl.moveValveToCloseLimit()
+			#self.valveControl.moveValveToCloseLimit()
 		else:
 			self.sendMsgToClient("Invalid instruction received!")
 			endTest("Invalid instruction: " + instruction + '|')
 
 	def clearInstructionQueue(self):
+		print("Clearing instruction queue...")
 		while not self.instructionQueue.empty():
 			self.instructionQueue.get(False)
 
@@ -141,14 +158,14 @@ class TestMain:
 			# periodically check for broken ethernet connection
 			try:
 				f = os.popen('cat /sys/class/net/eth0/carrier')
-				eth0_active = bool(f.read())
+				eth0_active = int(f.read())
 				#print("Eth0: " + str(eth0_active))
 				f.close()			
 			except Exception as e:
 				endTest(e)
 				break
 
-			if not eth0_active:
+			if eth0_active == 0:
 				endTest("Ethernet connection broken")
 				break
 

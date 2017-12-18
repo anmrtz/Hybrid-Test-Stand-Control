@@ -1,8 +1,4 @@
-#-----------------------------------------------------------------
-#
-#----- This is a Hybrid Engine Controller written in Python ------
-#
-#-----------------------------------------------------------------
+# Hybrid engine test stand client
 
 #required libraries
 import sys
@@ -28,7 +24,7 @@ class ReceiveThread(QtCore.QThread):
 	def __init__(self, sock):
 		QtCore.QThread.__init__(self)
 		self.sock = sock
-		self.charStream = ''
+		self.char_stream = ''
 
 	def run(self):
 		self.msg_received.emit('\nStarting receive thread...')
@@ -43,15 +39,15 @@ class ReceiveThread(QtCore.QThread):
 				self.conn_lost.emit('\nReceive thread connection lost!')
 				return
 
-			self.charStream += msg
+			self.char_stream += msg
 
 			while True:
-				a = re.search(r'\b(END)\b', self.charStream)
+				a = re.search(r'\b(END)\b', self.char_stream)
 				if a is None:
 					break
 						
-				instruction = self.charStream[:a.start()]
-				self.charStream = self.charStream[a.start()+3:]
+				instruction = self.char_stream[:a.start()]
+				self.char_stream = self.char_stream[a.start()+3:]
 			
 				tokens = instruction.split()
 			
@@ -153,10 +149,10 @@ class App(QMainWindow):
 		#----only doubles are allowed
 		self.ignitor_timing_box.setValidator(double_validator)
 		#----accompanying label
-		self.ignitor_label = QLabel(self)
-		self.ignitor_label.setText("Ignitor delay (s)")
-		self.ignitor_label.move(20,170)
-		self.ignitor_label.resize(230,30)
+		self.ignitor_button_label = QLabel(self)
+		self.ignitor_button_label.setText("Ignitor delay (s)")
+		self.ignitor_button_label.move(20,170)
+		self.ignitor_button_label.resize(230,30)
 
 		#Valve open timing
 		self.valve_open_timing_box = QLineEdit(self)
@@ -256,31 +252,31 @@ class App(QMainWindow):
 		self.status_box.resize(380,650);
 
 		#Close limit switch indicator
-		self.close_indicator_label = QLabel(self)
-		self.close_indicator_label.setText("Close switch")
-		self.close_indicator_label.move(400,70)
-		self.close_indicator = QPushButton(self)
-		self.close_indicator.move(590,70)
-		self.close_indicator.resize(170,30)
-		self.close_indicator.setEnabled(False)
+		self.mev_close_limit_indicator_label = QLabel(self)
+		self.mev_close_limit_indicator_label.setText("Close switch")
+		self.mev_close_limit_indicator_label.move(400,70)
+		self.mev_close_limit_indicator = QPushButton(self)
+		self.mev_close_limit_indicator.move(590,70)
+		self.mev_close_limit_indicator.resize(170,30)
+		self.mev_close_limit_indicator.setEnabled(False)
 
 		#Open limit switch indicator
-		self.open_indicator_label = QLabel(self)
-		self.open_indicator_label.setText("Open switch")
-		self.open_indicator_label.move(400,20)
-		self.open_indicator = QPushButton(self)
-		self.open_indicator.move(590,20)
-		self.open_indicator.resize(170,30)
-		self.open_indicator.setEnabled(False)
+		self.mev_open_limit_indicator_label = QLabel(self)
+		self.mev_open_limit_indicator_label.setText("Open switch")
+		self.mev_open_limit_indicator_label.move(400,20)
+		self.mev_open_limit_indicator = QPushButton(self)
+		self.mev_open_limit_indicator.move(590,20)
+		self.mev_open_limit_indicator.resize(170,30)
+		self.mev_open_limit_indicator.setEnabled(False)
 
 		#ignitor indicator
-		self.ignitor_indicator = QPushButton(self)
-		self.ignitor_indicator.move(590,120)
-		self.ignitor_indicator.resize(170,30)
-		self.ignitor_indicator.setEnabled(False)
-		self.ignitor_indicator_label = QLabel(self)
-		self.ignitor_indicator_label.setText("Ignitor status")
-		self.ignitor_indicator_label.move(400,120)
+		self.ignitor_button_indicator = QPushButton(self)
+		self.ignitor_button_indicator.move(590,120)
+		self.ignitor_button_indicator.resize(170,30)
+		self.ignitor_button_indicator.setEnabled(False)
+		self.ignitor_button_indicator_label = QLabel(self)
+		self.ignitor_button_indicator_label.setText("Ignitor status")
+		self.ignitor_button_indicator_label.move(400,120)
 
 		#encoder position
 		self.encoder_position_label = QLabel(self)
@@ -341,55 +337,76 @@ class App(QMainWindow):
 		self.disable_element(self.initial_opening_time_box)
 
 		#connect button
-		self.connect = QPushButton('Connect', self)
-		self.connect.setToolTip('You can only submit after the connection has been successfully established')
-		self.connect.resize(80,40)
-		self.connect.move(20, 570)
-		self.connect.clicked.connect(self.set_connection)
+		self.connect_button = QPushButton('Connect', self)
+		self.connect_button.setToolTip('You can only submit after the connection has been successfully established')
+		self.connect_button.resize(80,40)
+		self.connect_button.move(20, 570)
+		self.connect_button.clicked.connect(self.set_connection)
 
 		#submit button
-		self.auto_test = QPushButton('Auto Test', self)
-		self.auto_test.setToolTip('You can only submit after the connection has been successfully established')
-		self.auto_test.resize(80,40)
-		self.auto_test.move(200, 570)
-		self.auto_test.clicked.connect(self.submit_data)
-		self.auto_test.setEnabled(False)
-
-		#DISCONNECT button
-		self.disconnect = QPushButton('Disconnect', self)
-		self.disconnect.resize(80,40)
-		self.disconnect.move(110,570)
-		self.disconnect.clicked.connect(self.set_disconnect)
-		self.disconnect.setEnabled(False)
+		self.auto_test_button = QPushButton('Auto Test', self)
+		self.auto_test_button.setToolTip('You can only submit after the connection has been successfully established')
+		self.auto_test_button.resize(80,40)
+		self.auto_test_button.move(200, 570)
+		self.auto_test_button.clicked.connect(self.send_auto_test_params)
+		self.auto_test_button.setEnabled(False)
 
 		#ABORT button
-		self.abort = QPushButton('Abort', self)
-		self.abort.resize(70,100)
-		self.abort.move(290,570)
-		self.abort.clicked.connect(self.abortion)
-		self.abort.setEnabled(False)
-		self.abort.setStyleSheet("background-color: red")
+		self.abort_button = QPushButton('Abort', self)
+		self.abort_button.resize(140,100)
+		self.abort_button.move(400,570)
+		self.abort_button.clicked.connect(self.send_abort)
+		self.abort_button.setEnabled(False)
+		self.abort_button.setStyleSheet("background-color: red")
 
 		#TEST IGNITOR button
-		self.ignitor = QPushButton('Test Ignitor', self)
-		self.ignitor.resize(80,40)
-		self.ignitor.move(200,630)
-		self.ignitor.clicked.connect(self.ignition)
-		self.ignitor.setEnabled(False)
+		self.ignitor_button = QPushButton('Toggle\n Ignitor', self)
+		self.ignitor_button.resize(80,40)
+		self.ignitor_button.move(200,630)
+		self.ignitor_button.clicked.connect(self.send_toggle_ignitor)
+		self.ignitor_button.setEnabled(False)
 
 		#OPEN VALVE button
-		self.open_valve = QPushButton('Open Valve', self)
-		self.open_valve.resize(80,40)
-		self.open_valve.move(20,630)
-		self.open_valve.clicked.connect(self.valve_opener)
-		self.open_valve.setEnabled(False)
+		self.mev_open_button = QPushButton('Open MEV', self)
+		self.mev_open_button.resize(80,40)
+		self.mev_open_button.move(20,630)
+		self.mev_open_button.move(110,570)
+		self.mev_open_button.clicked.connect(self.send_mev_open)
+		self.mev_open_button.setEnabled(False)
 
 		#CLOSE VALVE button
-		self.close_valve = QPushButton('Close Valve', self)
-		self.close_valve.resize(80,40)
-		self.close_valve.move(110,630)
-		self.close_valve.clicked.connect(self.valve_closer)
-		self.close_valve.setEnabled(False)
+		self.mev_close_button = QPushButton('Close MEV', self)
+		self.mev_close_button.resize(80,40)
+		self.mev_close_button.move(110,630)
+		self.mev_close_button.clicked.connect(self.send_mev_close)
+		self.mev_close_button.setEnabled(False)
+
+		#TEST Vent valve button
+		self.vent_valve_button = QPushButton('Toggle\n Vent Valve', self)
+		self.vent_valve_button.resize(80,40)
+		self.vent_valve_button.move(290,570)
+		self.vent_valve_button.clicked.connect(self.send_toggle_vent_valve)
+		self.vent_valve_button.setEnabled(False)
+
+		#TEST NC valve button
+		self.nc_valve_button = QPushButton('Toggle\n NC Valve', self)
+		self.nc_valve_button.resize(80,40)
+		self.nc_valve_button.move(290,630)
+		self.nc_valve_button.clicked.connect(self.send_toggle_nc_valve)
+		self.nc_valve_button.setEnabled(False)
+
+		#Set default velocity button
+		self.set_default_vel_button = QPushButton('Set default vel.', self)
+		self.set_default_vel_button.move(400,320)
+		self.set_default_vel_button.resize(140,30)
+		self.set_default_vel_button.clicked.connect(self.send_new_default_vel)
+		self.set_default_vel_button.setEnabled(False)
+
+		#Set default velocity entry box
+		self.default_vel_entry = QLineEdit(self)
+		self.default_vel_entry.move(590, 320)
+		self.default_vel_entry.resize(170,30)
+		self.default_vel_entry.setPlaceholderText("Default vel. (deg/s)")
 
 		self.setWindowTitle(self.title)
 		self.setFixedSize(1200,700)
@@ -423,13 +440,15 @@ class App(QMainWindow):
 				self.receiver.conn_lost.connect(self.on_conn_lost)
 				self.receiver.start()
 
-			self.connect.setEnabled(False)
-			#self.disconnect.setEnabled(True)
-			self.auto_test.setEnabled(True)
-			self.ignitor.setEnabled(True)
-			self.abort.setEnabled(True)
-			self.open_valve.setEnabled(True)
-			self.close_valve.setEnabled(True)
+			self.connect_button.setEnabled(False)
+			self.auto_test_button.setEnabled(True)
+			self.ignitor_button.setEnabled(True)
+			self.abort_button.setEnabled(True)
+			self.mev_open_button.setEnabled(True)
+			self.mev_close_button.setEnabled(True)
+			self.nc_valve_button.setEnabled(True)
+			self.vent_valve_button.setEnabled(True)
+			self.set_default_vel_button.setEnabled(True)
 			
 			self.ip_box.setEnabled(False)
 			
@@ -445,7 +464,7 @@ class App(QMainWindow):
 		self.status_delay.setText(str(self.elapsed_timer.elapsed()).zfill(3))
 		
 	#submit data to the  server
-	def submit_data(self):
+	def send_auto_test_params(self):
 				#Collecting all of the variables from the textboxes
 		launch_code = self.launch_code_box.text()
 		burn_duration = self.burn_duration_box.text()
@@ -458,39 +477,54 @@ class App(QMainWindow):
 		total_opening_time = self.total_opening_time_box.text()
 		initial_opening_time = self.initial_opening_time_box.text()
 
-		engine_data = "HEAD " + launch_code + " " + burn_duration + " " + ignitor_timing + " " + valve_open_timing + " " + valve_closing_time + " " + \
+		auto_test_params = "AUTO_TEST_PARAMS " + launch_code + " " + burn_duration + " " + ignitor_timing + " " + valve_open_timing + " " + valve_closing_time + " " + \
 			limit_switch_slowdown + " " + angle_limit_switch_slowdown + " " + opening_profile_angle_delimiter + " " + total_opening_time + " " + \
 			initial_opening_time
 
-		if len(engine_data.split()) != 11:
+		if len(auto_test_params.split()) != 11:
 			self.on_msg_received("Auto test error: need 10 parameters\n")
 			return
 
 		try:
-			self.send_to_server(engine_data)
+			self.send_to_server(auto_test_params)
 		except Exception as e:
 			self.status_box.appendPlainText("Problem: " + str(e))
 			return
-		#self.auto_test.setEnabled(False)
+		#self.auto_test_button.setEnabled(False)
 		
 	def set_disconnect(self):
 		self.on_conn_lost("Disconnected")
 
 	#abort
-	def abortion(self):
+	def send_abort(self):
 		self.send_to_server("ABORT")
 
+	def send_toggle_vent_valve(self):
+		self.send_to_server("VENT_VALVE")
+		
+	def send_toggle_nc_valve(self):
+		self.send_to_server("NC_VALVE")
+		
+	def send_new_default_vel(self):
+		new_default_vel = self.default_vel_entry.text()
+		try:
+			int(new_default_vel)
+		except:
+			self.on_msg_received("Set default velocity error: invalid integer\n")
+			return			
+		self.send_to_server("DEFAULT_VEL " + new_default_vel)
+
 	#open valve
-	def valve_opener(self):
-		self.send_to_server("VALVE OPEN")
+	def send_mev_open(self):
+		self.send_to_server("MEV OPEN")
 
 	#ignition
-	def ignition(self):
-		self.send_to_server("IGNITE")
+	def send_toggle_ignitor(self):
+		self.send_to_server("IGNITOR")
 
 	#valve closing
-	def valve_closer(self):
-		self.send_to_server("VALVE CLOSE")
+	def send_mev_close(self):
+		self.send_to_server("MEV CLOSE")
 
 	def on_msg_received(self, msg):
 		self.status_box.appendPlainText(msg)
@@ -498,28 +532,28 @@ class App(QMainWindow):
 	def on_limit_state_received(self, switch_open, switch_closed):
 		self.elapsed_timer.restart()
 		if switch_open:
-			self.open_indicator.setText("FULLY OPEN")
-			self.open_indicator.setStyleSheet("background-color: green")
+			self.mev_open_limit_indicator.setText("FULLY OPEN")
+			self.mev_open_limit_indicator.setStyleSheet("background-color: green")
 		else:
-			self.open_indicator.setText("")
-			self.open_indicator.setStyleSheet("background-color: white")
+			self.mev_open_limit_indicator.setText("")
+			self.mev_open_limit_indicator.setStyleSheet("background-color: white")
 		if switch_closed:
-			self.close_indicator.setText("FULLY CLOSED")
-			self.close_indicator.setStyleSheet("background-color: green")
+			self.mev_close_limit_indicator.setText("FULLY CLOSED")
+			self.mev_close_limit_indicator.setStyleSheet("background-color: green")
 		else:
-			self.close_indicator.setText("")
-			self.close_indicator.setStyleSheet("background-color: white")
+			self.mev_close_limit_indicator.setText("")
+			self.mev_close_limit_indicator.setStyleSheet("background-color: white")
 
 	def on_encoder_position_received(self, value):
 		self.encoder_position.setText('{:.1f}'.format(value * _DEGREES_PER_ENCODER_COUNT))
 			
 	def on_ignitor_state_received(self, active):
 		if active:
-			self.ignitor_indicator.setText("ON")
-			self.ignitor_indicator.setStyleSheet("background-color: red")
+			self.ignitor_button_indicator.setText("ON")
+			self.ignitor_button_indicator.setStyleSheet("background-color: red")
 		else:
-			self.ignitor_indicator.setText("OFF")
-			self.ignitor_indicator.setStyleSheet("background-color: white")
+			self.ignitor_button_indicator.setText("OFF")
+			self.ignitor_button_indicator.setStyleSheet("background-color: white")
 
 	def on_default_velocity_received(self, vel):
 		self.default_velocity.setText('{:.1f}'.format(vel))
@@ -528,14 +562,14 @@ class App(QMainWindow):
 		self.current_velocity.setText('{:.1f}'.format(vel))
 		
 	def set_all_indicator_buttons(self, msg, color):
-		self.close_indicator.setText(msg)
-		self.close_indicator.setStyleSheet(color)
+		self.mev_close_limit_indicator.setText(msg)
+		self.mev_close_limit_indicator.setStyleSheet(color)
 
-		self.open_indicator.setText(msg)
-		self.open_indicator.setStyleSheet(color)
+		self.mev_open_limit_indicator.setText(msg)
+		self.mev_open_limit_indicator.setStyleSheet(color)
 
-		self.ignitor_indicator.setText(msg)
-		self.ignitor_indicator.setStyleSheet(color)
+		self.ignitor_button_indicator.setText(msg)
+		self.ignitor_button_indicator.setStyleSheet(color)
 
 	def send_to_server(self, msg):
 		msg += ' END\n'
@@ -545,7 +579,7 @@ class App(QMainWindow):
 			except Exception as e:
 				print("Send to server failed: " + str(e))
 
-	def on_conn_lost(self, msg):
+	def on_conn_lost(self, msg = ""):
 		self.status_box.appendPlainText(msg)
 		self.set_all_indicator_buttons("Unknown", "background-color: gray")
 		self.encoder_position.setText("Unknown")
@@ -558,14 +592,15 @@ class App(QMainWindow):
 			self.sock.close()
 			self.sock = None
 
-		self.connect.setEnabled(True)
-		self.disconnect.setEnabled(False)
-
-		self.abort.setEnabled(False)
-		self.ignitor.setEnabled(False)
-		self.open_valve.setEnabled(False)
-		self.close_valve.setEnabled(False)
-		self.auto_test.setEnabled(False)
+		self.connect_button.setEnabled(True)
+		self.abort_button.setEnabled(False)
+		self.ignitor_button.setEnabled(False)
+		self.mev_open_button.setEnabled(False)
+		self.mev_close_button.setEnabled(False)
+		self.auto_test_button.setEnabled(False)
+		self.nc_valve_button.setEnabled(False)
+		self.vent_valve_button.setEnabled(False)
+		self.set_default_vel_button.setEnabled(False)
 
 		self.receiver = None
 

@@ -18,7 +18,7 @@ class ValveControl():
 	_ENCODER_COUNT_PER_DEGREES = 300.0 / 90.0
 	_DEGREES_PER_ENCODER_COUNT = 90.0 / 300.0
 
-	def __init__(self, pinCloseLimit = 21, pinOpenLimit = 26, pinAlwaysClosedValve = 20, pinIgnitor = 16, testMain = None):
+	def __init__(self, pinCloseLimit = 5, pinOpenLimit = 6, pinNCValve = 20, pinVentValve = 21, pinIgnitor = 16, testMain = None):
 		GPIO.setmode(GPIO.BCM)
 
 		self.pinCloseLimit = pinCloseLimit
@@ -29,7 +29,16 @@ class ValveControl():
 		
 		self.pinIgnitor = pinIgnitor
 		GPIO.setup(self.pinIgnitor, GPIO.OUT)
+		
+		self.pinNCValve = pinNCValve
+		GPIO.setup(self.pinNCValve, GPIO.OUT)
+
+		self.pinVentValve = pinVentValve
+		GPIO.setup(self.pinVentValve, GPIO.OUT)		
+		
 		self.ignitorActiveFlag = False
+		self.NCValveActiveFlag = False
+		self.ventValveActiveFlag = False
 		
 		#store reference to parent TestMain object
 		self.testMain = testMain
@@ -242,12 +251,33 @@ class ValveControl():
 			time.sleep(0.001)			
 		self.setVelocity(0)
 
+	def setDefaultVelocity(self, newDefaultVel):
+		if (newDefaultVel > 0 and newDefaultVel <= ValveControl._MAX_SPEED):
+			self.defaultVelocity = newDefaultVel
+			return "Default velocity set to " + str(newDefaultVel) + " deg/s"
+		else:
+			return "Set default velocity error: value out of range"
+
 	def setIgnitor(self, active):
 		self.ignitorActiveFlag = active
 		GPIO.output(self.pinIgnitor, self.ignitorActiveFlag)
 		
+	def setNCValve(self, active):
+		self.NCValveActiveFlag = active
+		GPIO.output(self.pinNCValve, self.NCValveActiveFlag)
+		
+	def setVentValve(self, active):
+		self.ventValveActiveFlag = active
+		GPIO.output(self.pinVentValve, self.ventValveActiveFlag)
+	
 	def ignitorActive(self):
 		return self.ignitorActiveFlag
+
+	def NCValveActive(self):
+		return self.NCValveActiveFlag
+		
+	def ventValveActive(self):
+		return self.ventValveActiveFlag
 		
 	def __del__(self):
 		GPIO.cleanup()
