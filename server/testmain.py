@@ -181,7 +181,8 @@ class TestMain:
 				try:
 					state_msg = "STATEALL " + str(int(self.valveControl.openLimitHit())) + " " + str(int(self.valveControl.closeLimitHit())) + " " + \
 						str(int(self.valveControl.encoder.getPosition())) + " " + str(int(self.valveControl.ignitorActive())) + " " + \
-						str(float(self.valveControl.defaultVelocity)) + " " + str(float(self.valveControl.stepper.getVelocity()))
+						str(float(self.valveControl.defaultVelocity)) + " " + str(float(self.valveControl.stepper.getVelocity())) + " " + \
+						str(int(self.valveControl.ventValveActive())) + " " + str(int(self.valveControl.NCValveActive()))
 				except Exception as e:
 					print("Status send error: " + str(e))
 				else:
@@ -219,8 +220,8 @@ class TestMain:
 	# use this function to start the motor-controller test sequence
 	def startAutoTest(self, params):
 		print("Auto test parameters recieved: " + str(params))
-		if len(params) != 10:
-			endTest("Need 10 input parameters for auto test")
+		if len(params) != 5:
+			endTest("Need 5 input parameters for auto test")
 			return
 		try:
 			launch_code = int(params[0])
@@ -228,11 +229,6 @@ class TestMain:
 			ignitor_delay = float(params[2])
 			valve_opening_time = float(params[3])
 			valve_closing_time = float(params[4])
-			limit_switch_slowdown_speed = float(params[5])
-			angle_limit_switch_slowdown_mode = float(params[6])
-			opening_profile_angle_delimiter = float(params[7])
-			total_opening_time = float(params[8])
-			initial_opening_time = float(params[9])
 		except Exception as e:
 			self.sendMsgToClient("ERROR! Cannot start auto test: " + str(e))
 			return
