@@ -18,14 +18,14 @@ class ValveControl():
 	_ENCODER_COUNT_PER_DEGREES = 300.0 / 90.0
 	_DEGREES_PER_ENCODER_COUNT = 90.0 / 300.0
 
-	def __init__(self, pinCloseLimit = 5, pinOpenLimit = 6, pinNCValve = 20, pinVentValve = 21, pinIgnitor = 16, testMain = None):
+	def __init__(self, pinCloseLimit = 5, pinOpenLimit = 6, pinNCValve = 20, pinVentValve = 21, pinIgnitor = 16, pinNCValveRelayIn = 12, pinVentValveRelayIn = 25, pinIgnitorRelayIn = 26, testMain = None):
 		GPIO.setmode(GPIO.BCM)
 
 		self.pinCloseLimit = pinCloseLimit
-		GPIO.setup(self.pinCloseLimit, GPIO.IN,pull_up_down=GPIO.PUD_UP)
+		GPIO.setup(self.pinCloseLimit, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 		self.pinOpenLimit = pinOpenLimit
-		GPIO.setup(self.pinOpenLimit, GPIO.IN,pull_up_down=GPIO.PUD_UP)
+		GPIO.setup(self.pinOpenLimit, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 		
 		self.pinIgnitor = pinIgnitor
 		GPIO.setup(self.pinIgnitor, GPIO.OUT)
@@ -35,10 +35,15 @@ class ValveControl():
 
 		self.pinVentValve = pinVentValve
 		GPIO.setup(self.pinVentValve, GPIO.OUT)		
-		
-		self.ignitorActiveFlag = False
-		self.NCValveActiveFlag = False
-		self.ventValveActiveFlag = False
+
+		self.pinNCValveRelayIn = pinNCValveRelayIn
+		GPIO.setup(self.pinNCValveRelayIn, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)		
+
+		self.pinVentValveRelayIn = pinVentValveRelayIn
+		GPIO.setup(self.pinVentValveRelayIn, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)		
+
+		self.pinIgnitorRelayIn = pinIgnitorRelayIn
+		GPIO.setup(self.pinIgnitorRelayIn, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)		
 		
 		#store reference to parent TestMain object
 		self.testMain = testMain
@@ -259,25 +264,22 @@ class ValveControl():
 			return "Set default velocity error: value out of range"
 
 	def setIgnitor(self, active):
-		self.ignitorActiveFlag = active
-		GPIO.output(self.pinIgnitor, self.ignitorActiveFlag)
+		GPIO.output(self.pinIgnitor, active)
 		
 	def setNCValve(self, active):
-		self.NCValveActiveFlag = active
-		GPIO.output(self.pinNCValve, self.NCValveActiveFlag)
+		GPIO.output(self.pinNCValve, active)
 		
 	def setVentValve(self, active):
-		self.ventValveActiveFlag = active
-		GPIO.output(self.pinVentValve, self.ventValveActiveFlag)
+		GPIO.output(self.pinVentValve, active)
 	
 	def ignitorActive(self):
-		return self.ignitorActiveFlag
+		return GPIO.input(self.pinIgnitorRelayIn) != 0
 
 	def NCValveActive(self):
-		return self.NCValveActiveFlag
+		return GPIO.input(self.pinNCValveRelayIn) != 0
 		
 	def ventValveActive(self):
-		return self.ventValveActiveFlag
+		return GPIO.input(self.pinVentValveRelayIn) != 0
 		
 	def __del__(self):
 		GPIO.cleanup()
