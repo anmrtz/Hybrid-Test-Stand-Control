@@ -106,6 +106,8 @@ class App(QMainWindow):
 		self.receiver = None
 		self.sock = None
 		self.status_timer = QTimer()
+		self.mev_open_timer = QElapsedTimer()
+		self.mev_fully_open = True
 
 		#Status message box
 		self.status_box = QPlainTextEdit(self)
@@ -129,14 +131,22 @@ class App(QMainWindow):
 		self.ip_label = QLabel(self.server_connect_group)
 		self.ip_label.setText("IP Address")
 		self.ip_label.move(10,30)
-		self.ip_label.resize(230,30)
+		#self.ip_label.resize(230,30)
 
 		#connect button
 		self.connect_button = QPushButton('Connect', self.server_connect_group)
 		self.connect_button.setToolTip('You can only submit after the connection has been successfully established')
-		self.connect_button.resize(140,30)
+		self.connect_button.resize(165,30)
 		self.connect_button.move(10, 80)
 		self.connect_button.clicked.connect(self.set_connection)
+
+		#ABORT button
+		self.abort_button = QPushButton('Disconnect', self.server_connect_group)
+		self.abort_button.resize(165,30)
+		self.abort_button.move(185,80)
+		self.abort_button.clicked.connect(self.send_abort)
+		self.abort_button.setEnabled(False)
+		self.abort_button.setStyleSheet("background-color: red")
 
 		#ignition sequence group
 		self.ignition_sequence_group = QGroupBox(self)
@@ -156,7 +166,7 @@ class App(QMainWindow):
 		self.launch_label = QLabel(self.ignition_sequence_group)
 		self.launch_label.setText("Launch code")
 		self.launch_label.move(10,30)
-		self.launch_label.resize(230,30)
+		#self.launch_label.resize(230,30)
 
 		#Burn duration
 		self.burn_duration_box = QLineEdit(self.ignition_sequence_group)
@@ -170,7 +180,7 @@ class App(QMainWindow):
 		self.burn_label = QLabel(self.ignition_sequence_group)
 		self.burn_label.setText("Burn duration (s)")
 		self.burn_label.move(10,80)
-		self.burn_label.resize(230,30)
+		#self.burn_label.resize(230,30)
 
 		#Ignitor timing
 		self.ignitor_timing_box = QLineEdit(self.ignition_sequence_group)
@@ -183,7 +193,7 @@ class App(QMainWindow):
 		self.ignitor_button_label = QLabel(self.ignition_sequence_group)
 		self.ignitor_button_label.setText("Ignitor delay (s)")
 		self.ignitor_button_label.move(10,130)
-		self.ignitor_button_label.resize(230,30)
+		#self.ignitor_button_label.resize(230,30)
 
 		#Valve open timing
 		self.valve_open_timing_box = QLineEdit(self.ignition_sequence_group)
@@ -196,7 +206,7 @@ class App(QMainWindow):
 		self.valve_open_label = QLabel(self.ignition_sequence_group)
 		self.valve_open_label.setText("Valve opening (s)")
 		self.valve_open_label.move(10,180)
-		self.valve_open_label.resize(230,30)
+		#self.valve_open_label.resize(230,30)
 
 		#Valve closing time
 		self.valve_closing_time_box = QLineEdit(self.ignition_sequence_group)
@@ -209,7 +219,7 @@ class App(QMainWindow):
 		self.valve_close_label = QLabel(self.ignition_sequence_group)
 		self.valve_close_label.setText("Valve closing (s)")
 		self.valve_close_label.move(10,230)
-		self.valve_close_label.resize(230,30)
+		#self.valve_close_label.resize(230,30)
 
 		#start ignition sequence button
 		self.auto_test_button = QPushButton('Start sequence', self.ignition_sequence_group)
@@ -222,7 +232,7 @@ class App(QMainWindow):
 		#server status group
 		self.server_status_group = QGroupBox(self)
 		self.server_status_group.move(400, 40)
-		self.server_status_group.resize(380, 520)
+		self.server_status_group.resize(380, 620)
 		self.server_status_group.setTitle("System status")
 
 		#Close limit switch indicator
@@ -249,7 +259,7 @@ class App(QMainWindow):
 		self.ignitor_button_indicator.resize(170,30)
 		self.ignitor_button_indicator.setEnabled(False)
 		self.ignitor_button_indicator_label = QLabel(self.server_status_group)
-		self.ignitor_button_indicator_label.setText("Ignitor status")
+		self.ignitor_button_indicator_label.setText("Ignitor relay")
 		self.ignitor_button_indicator_label.move(10,230)
 
 		#vent valve indicator
@@ -258,7 +268,7 @@ class App(QMainWindow):
 		self.vent_valve_button_indicator.resize(170,30)
 		self.vent_valve_button_indicator.setEnabled(False)
 		self.vent_valve_button_indicator_label = QLabel(self.server_status_group)
-		self.vent_valve_button_indicator_label.setText("Vent valve status")
+		self.vent_valve_button_indicator_label.setText("Vent valve relay")
 		self.vent_valve_button_indicator_label.move(10,130)
 		self.vent_valve_button_indicator_label.resize(170,30)
 		
@@ -268,7 +278,7 @@ class App(QMainWindow):
 		self.nc_valve_button_indicator.resize(170,30)
 		self.nc_valve_button_indicator.setEnabled(False)
 		self.nc_valve_button_indicator_label = QLabel(self.server_status_group)
-		self.nc_valve_button_indicator_label.setText("NC valve status")
+		self.nc_valve_button_indicator_label.setText("NC valve relay")
 		self.nc_valve_button_indicator_label.move(10,180)
 
 		#encoder position
@@ -303,6 +313,18 @@ class App(QMainWindow):
 		self.default_velocity.resize(170,30)
 		self.default_velocity.setReadOnly(True)
 		self.default_velocity.setPlaceholderText("Unknown")
+
+		#Set default velocity button
+		self.set_default_vel_button = QPushButton('Set default vel.', self.server_status_group)
+		self.set_default_vel_button.move(10,430)
+		self.set_default_vel_button.resize(140,30)
+		self.set_default_vel_button.clicked.connect(self.send_new_default_vel)
+		self.set_default_vel_button.setEnabled(False)
+		#Set default velocity entry box
+		self.default_vel_entry = QLineEdit(self.server_status_group)
+		self.default_vel_entry.move(200, 430)
+		self.default_vel_entry.resize(170,30)
+		self.default_vel_entry.setPlaceholderText("Default vel. (deg/s)")
 		
 		#time since last status update from server
 		self.status_delay_label = QLabel(self.server_status_group)
@@ -316,31 +338,23 @@ class App(QMainWindow):
 		self.status_delay.setReadOnly(True)
 		self.status_delay.setPlaceholderText("Unknown")
 
-		#Set default velocity button
-		self.set_default_vel_button = QPushButton('Set default vel.', self.server_status_group)
-		self.set_default_vel_button.move(10,430)
-		self.set_default_vel_button.resize(140,30)
-		self.set_default_vel_button.clicked.connect(self.send_new_default_vel)
-		self.set_default_vel_button.setEnabled(False)
-		#Set default velocity entry box
-		self.default_vel_entry = QLineEdit(self.server_status_group)
-		self.default_vel_entry.move(200, 430)
-		self.default_vel_entry.resize(170,30)
-		self.default_vel_entry.setPlaceholderText("Default vel. (deg/s)")
+		# time since MEV was opened
+		self.mev_open_time_label = QLabel(self.server_status_group)
+		self.mev_open_time_label.setWordWrap(True)
+		self.mev_open_time_label.setText("MEV open time (ms)")
+		self.mev_open_time_label.move(10,530)
+		self.mev_open_time_label.resize(230,30)
+		self.mev_open_time = QLineEdit(self.server_status_group)
+		self.mev_open_time.move(200, 530)
+		self.mev_open_time.resize(170,30)
+		self.mev_open_time.setReadOnly(True)
+		self.mev_open_time.setPlaceholderText("Unknown")
 
 		#manual control group
 		self.manual_control_group = QGroupBox(self)
 		self.manual_control_group.move(10, 530)
 		self.manual_control_group.resize(340, 130)
 		self.manual_control_group.setTitle("Manual control")
-
-		#ABORT button
-		self.abort_button = QPushButton('Abort', self.manual_control_group)
-		self.abort_button.resize(100,40)
-		self.abort_button.move(230,80)
-		self.abort_button.clicked.connect(self.send_abort)
-		self.abort_button.setEnabled(False)
-		self.abort_button.setStyleSheet("background-color: red")
 
 		#TEST IGNITOR button
 		self.ignitor_button = QPushButton('Toggle\n Ignitor', self.manual_control_group)
@@ -430,14 +444,19 @@ class App(QMainWindow):
 			
 			self.elapsed_timer = QElapsedTimer()
 			self.elapsed_timer.start()
+			
 			self.status_timer.timeout.connect(self.on_status_timer)
-			self.count = 0
 			self.status_timer.start(1)
+			
+			self.mev_open_timer.start()
+						
 		except Exception as e:
 			self.status_box.appendPlainText("Connection failure:" + str(e))
 
 	def on_status_timer(self):
 		self.status_delay.setText(str(self.elapsed_timer.elapsed()).zfill(3))
+		if self.mev_fully_open:
+			self.mev_open_time.setText(str(self.mev_open_timer.elapsed()).zfill(3))
 		
 	#submit data to the  server
 	def send_auto_test_params(self):
@@ -502,9 +521,13 @@ class App(QMainWindow):
 		if switch_open:
 			self.mev_open_limit_indicator.setText("FULLY OPEN")
 			self.mev_open_limit_indicator.setStyleSheet("background-color: green")
+			if not self.mev_fully_open:
+				self.mev_open_timer.restart()
+			self.mev_fully_open = True
 		else:
 			self.mev_open_limit_indicator.setText("")
 			self.mev_open_limit_indicator.setStyleSheet("background-color: white")
+			self.mev_fully_open = False
 		if switch_closed:
 			self.mev_close_limit_indicator.setText("FULLY CLOSED")
 			self.mev_close_limit_indicator.setStyleSheet("background-color: green")
@@ -575,7 +598,6 @@ class App(QMainWindow):
 		self.encoder_position.setText("Unknown")
 		self.default_velocity.setText("Unknown")
 		self.current_velocity.setText("Unknown")
-		
 		
 		self.ip_box.setEnabled(True)
 		

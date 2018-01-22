@@ -79,6 +79,8 @@ class TestMain:
 		checkStatusThread.daemon = False
 		checkStatusThread.start()
 
+		self.client.settimeout(1)
+
 		recvClientMsgThread = threading.Thread(target = self.recvClientMsg, args = ())
 		recvClientMsgThread.daemon = False 	
 		recvClientMsgThread.start()
@@ -161,6 +163,8 @@ class TestMain:
 				eth0_active = int(f.read())
 				#print("Eth0: " + str(eth0_active))
 				f.close()			
+			except socket.timeout as e:
+				continue
 			except Exception as e:
 				endTest(e)
 				break
@@ -194,6 +198,8 @@ class TestMain:
 		while not testEnded():
 			try:
 				data = self.client.recv(1024)	
+			except socket.timeout as e:
+				continue
 			except Exception as e:
 				endTest(e)
 				break
