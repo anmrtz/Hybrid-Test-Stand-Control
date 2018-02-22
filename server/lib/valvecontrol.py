@@ -18,7 +18,7 @@ class ValveControl():
 	_ENCODER_COUNT_PER_DEGREES = 300.0 / 90.0
 	_DEGREES_PER_ENCODER_COUNT = 90.0 / 300.0
 
-	def __init__(self, pinCloseLimit = 5, pinOpenLimit = 6, pinNCValve = 20, pinVentValve = 21, pinIgnitor = 16, pinNCValveRelayIn = 12, pinVentValveRelayIn = 25, pinIgnitorRelayIn = 26, testMain = None):
+	def __init__(self, pinCloseLimit = 5, pinOpenLimit = 6, pinNCValve = 20, pinVentValve = 21, pinIgnitor = 16, pinNCValveRelayIn = 12, pinVentValveRelayIn = 25, pinIgnitorRelayIn = 26, pinLockoutIn = 13, testMain = None):
 		GPIO.setmode(GPIO.BCM)
 
 		self.pinCloseLimit = pinCloseLimit
@@ -44,6 +44,9 @@ class ValveControl():
 
 		self.pinIgnitorRelayIn = pinIgnitorRelayIn
 		GPIO.setup(self.pinIgnitorRelayIn, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)		
+		
+		self.pinLockoutIn = pinLockoutIn
+		GPIO.setup(self.pinLockoutIn, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)		
 		
 		#store reference to parent TestMain object
 		self.testMain = testMain
@@ -280,6 +283,9 @@ class ValveControl():
 		
 	def ventValveActive(self):
 		return GPIO.input(self.pinVentValveRelayIn) != 0
+		
+	def lockoutArmed(self):
+		return GPIO.input(self.pinLockoutIn) != 0
 		
 	def __del__(self):
 		GPIO.cleanup()

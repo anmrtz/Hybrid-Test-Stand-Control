@@ -22,6 +22,7 @@ class ReceiveThread(QtCore.QThread):
 	current_velocity_received = QtCore.pyqtSignal(float)
 	nc_valve_state_received = QtCore.pyqtSignal(int)
 	vent_valve_state_received = QtCore.pyqtSignal(int)
+	lockout_state_received = QtCore.pyqtSignal(int)
 
 	def __init__(self, sock):
 		QtCore.QThread.__init__(self)
@@ -63,6 +64,7 @@ class ReceiveThread(QtCore.QThread):
 						current_velocity = float(tokens[6])
 						vent_valve_open = tokens[7] == '1'
 						nc_valve_open = tokens[8] == '1'
+						lockout_armed = tokens[9] == '1'
 						self.limit_state_received.emit(switch_open,switch_closed)
 						self.ignitor_state_received.emit(ignitor_on)
 						self.encoder_position_received.emit(encoder_val)
@@ -70,6 +72,7 @@ class ReceiveThread(QtCore.QThread):
 						self.current_velocity_received.emit(current_velocity)
 						self.vent_valve_state_received.emit(vent_valve_open)
 						self.nc_valve_state_received.emit(nc_valve_open)
+						self.lockout_state_received.emit(lockout_armed)
 
 						#self.msg_received.emit('\nFrom server: %s' % msg)
 					except Exception as e:
@@ -281,13 +284,22 @@ class App(QMainWindow):
 		self.nc_valve_button_indicator_label.setText("NC valve relay")
 		self.nc_valve_button_indicator_label.move(10,180)
 
+		#lockout box indicator
+		self.lockout_button_indicator = QPushButton(self.server_status_group)
+		self.lockout_button_indicator.move(200,280)
+		self.lockout_button_indicator.resize(170,30)
+		self.lockout_button_indicator.setEnabled(False)
+		self.lockout_button_indicator_label = QLabel(self.server_status_group)
+		self.lockout_button_indicator_label.setText("System armed")
+		self.lockout_button_indicator_label.move(10,280)
+
 		#encoder position
 		self.encoder_position_label = QLabel(self.server_status_group)
 		self.encoder_position_label.setText("Encoder pos. (deg)")
-		self.encoder_position_label.move(10,280)
+		self.encoder_position_label.move(10,330)
 		self.encoder_position_label.resize(230,30)
 		self.encoder_position = QLineEdit(self.server_status_group)
-		self.encoder_position.move(200, 280)
+		self.encoder_position.move(200, 330)
 		self.encoder_position.resize(170,30)
 		self.encoder_position.setReadOnly(True)
 		self.encoder_position.setPlaceholderText("Unknown")
@@ -295,10 +307,10 @@ class App(QMainWindow):
 		#current motor velocity
 		self.current_velocity_label = QLabel(self.server_status_group)
 		self.current_velocity_label.setText("Current vel. (deg/s)")
-		self.current_velocity_label.move(10,330)
+		self.current_velocity_label.move(10,380)
 		self.current_velocity_label.resize(230,30)
 		self.current_velocity = QLineEdit(self.server_status_group)
-		self.current_velocity.move(200, 330)
+		self.current_velocity.move(200, 380)
 		self.current_velocity.resize(170,30)
 		self.current_velocity.setReadOnly(True)
 		self.current_velocity.setPlaceholderText("Unknown")
@@ -306,23 +318,23 @@ class App(QMainWindow):
 		#motor default velocity
 		self.default_velocity_label = QLabel(self.server_status_group)
 		self.default_velocity_label.setText("Default vel. (deg/s)")
-		self.default_velocity_label.move(10,380)
+		self.default_velocity_label.move(10,430)
 		self.default_velocity_label.resize(230,30)
 		self.default_velocity = QLineEdit(self.server_status_group)
-		self.default_velocity.move(200, 380)
+		self.default_velocity.move(200, 430)
 		self.default_velocity.resize(170,30)
 		self.default_velocity.setReadOnly(True)
 		self.default_velocity.setPlaceholderText("Unknown")
 
 		#Set default velocity button
 		self.set_default_vel_button = QPushButton('Set default vel.', self.server_status_group)
-		self.set_default_vel_button.move(10,430)
+		self.set_default_vel_button.move(10,480)
 		self.set_default_vel_button.resize(140,30)
 		self.set_default_vel_button.clicked.connect(self.send_new_default_vel)
 		self.set_default_vel_button.setEnabled(False)
 		#Set default velocity entry box
 		self.default_vel_entry = QLineEdit(self.server_status_group)
-		self.default_vel_entry.move(200, 430)
+		self.default_vel_entry.move(200, 480)
 		self.default_vel_entry.resize(170,30)
 		self.default_vel_entry.setPlaceholderText("Default vel. (deg/s)")
 		
@@ -330,10 +342,10 @@ class App(QMainWindow):
 		self.status_delay_label = QLabel(self.server_status_group)
 		self.status_delay_label.setWordWrap(True)
 		self.status_delay_label.setText("Last update (ms)")
-		self.status_delay_label.move(10,480)
+		self.status_delay_label.move(10,530)
 		self.status_delay_label.resize(230,30)
 		self.status_delay = QLineEdit(self.server_status_group)
-		self.status_delay.move(200, 480)
+		self.status_delay.move(200, 530)
 		self.status_delay.resize(170,30)
 		self.status_delay.setReadOnly(True)
 		self.status_delay.setPlaceholderText("Unknown")
@@ -342,10 +354,10 @@ class App(QMainWindow):
 		self.mev_open_time_label = QLabel(self.server_status_group)
 		self.mev_open_time_label.setWordWrap(True)
 		self.mev_open_time_label.setText("MEV open time (ms)")
-		self.mev_open_time_label.move(10,530)
+		self.mev_open_time_label.move(10,580)
 		self.mev_open_time_label.resize(230,30)
 		self.mev_open_time = QLineEdit(self.server_status_group)
-		self.mev_open_time.move(200, 530)
+		self.mev_open_time.move(200, 580)
 		self.mev_open_time.resize(170,30)
 		self.mev_open_time.setReadOnly(True)
 		self.mev_open_time.setPlaceholderText("Unknown")
@@ -428,6 +440,7 @@ class App(QMainWindow):
 				self.receiver.conn_lost.connect(self.on_conn_lost)
 				self.receiver.vent_valve_state_received.connect(self.on_vent_valve_state_received)
 				self.receiver.nc_valve_state_received.connect(self.on_nc_valve_state_received)
+				self.receiver.lockout_state_received.connect(self.on_lockout_state_received)
 				self.receiver.start()
 
 			self.connect_button.setEnabled(False)
@@ -520,17 +533,17 @@ class App(QMainWindow):
 		self.elapsed_timer.restart()
 		if switch_open:
 			self.mev_open_limit_indicator.setText("FULLY OPEN")
-			self.mev_open_limit_indicator.setStyleSheet("background-color: green")
+			self.mev_open_limit_indicator.setStyleSheet("background-color: red")
 			if not self.mev_fully_open:
 				self.mev_open_timer.restart()
 			self.mev_fully_open = True
 		else:
 			self.mev_open_limit_indicator.setText("")
 			self.mev_open_limit_indicator.setStyleSheet("background-color: white")
-			self.mev_fully_open = False
 		if switch_closed:
 			self.mev_close_limit_indicator.setText("FULLY CLOSED")
 			self.mev_close_limit_indicator.setStyleSheet("background-color: green")
+			self.mev_fully_open = False
 		else:
 			self.mev_close_limit_indicator.setText("")
 			self.mev_close_limit_indicator.setStyleSheet("background-color: white")
@@ -562,6 +575,14 @@ class App(QMainWindow):
 			self.nc_valve_button_indicator.setText("OFF")
 			self.nc_valve_button_indicator.setStyleSheet("background-color: white")
 
+	def on_lockout_state_received(self, active):
+		if active:
+			self.lockout_button_indicator.setText("ARMED")
+			self.lockout_button_indicator.setStyleSheet("background-color: red")
+		else:
+			self.lockout_button_indicator.setText("DISARMED")
+			self.lockout_button_indicator.setStyleSheet("background-color: green")		
+
 	def on_default_velocity_received(self, vel):
 		self.default_velocity.setText('{:.1f}'.format(vel))
 
@@ -583,6 +604,9 @@ class App(QMainWindow):
 
 		self.nc_valve_button_indicator.setText(msg)
 		self.nc_valve_button_indicator.setStyleSheet(color)
+
+		self.lockout_button_indicator.setText(msg)
+		self.lockout_button_indicator.setStyleSheet(color)
 
 	def send_to_server(self, msg):
 		msg += ' END\n'

@@ -186,7 +186,8 @@ class TestMain:
 					state_msg = "STATEALL " + str(int(self.valveControl.openLimitHit())) + " " + str(int(self.valveControl.closeLimitHit())) + " " + \
 						str(int(self.valveControl.encoder.getPosition())) + " " + str(int(self.valveControl.ignitorActive())) + " " + \
 						str(float(self.valveControl.defaultVelocity)) + " " + str(float(self.valveControl.stepper.getVelocity())) + " " + \
-						str(int(self.valveControl.ventValveActive())) + " " + str(int(self.valveControl.NCValveActive()))
+						str(int(self.valveControl.ventValveActive())) + " " + str(int(self.valveControl.NCValveActive())) + " " + \
+						str(int(self.valveControl.lockoutArmed()))
 				except Exception as e:
 					print("Status send error: " + str(e))
 				else:
