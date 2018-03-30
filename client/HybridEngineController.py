@@ -21,7 +21,6 @@ class ReceiveThread(QtCore.QThread):
 	default_velocity_received = QtCore.pyqtSignal(float)
 	current_velocity_received = QtCore.pyqtSignal(float)
 	nc_valve_state_received = QtCore.pyqtSignal(int)
-	vent_valve_state_received = QtCore.pyqtSignal(int)
 	lockout_state_received = QtCore.pyqtSignal(int)
 
 	def __init__(self, sock):
@@ -56,21 +55,22 @@ class ReceiveThread(QtCore.QThread):
 			
 				if (tokens[0] == "STATEALL"):
 					try:
-						switch_open = tokens[1] == "1"
-						switch_closed = tokens[2] == "1"
-						encoder_val = int(tokens[3])
-						ignitor_on = tokens[4] == "1"
-						default_velocity = float(tokens[5])
-						current_velocity = float(tokens[6])
-						vent_valve_open = tokens[7] == '1'
-						nc_valve_open = tokens[8] == '1'
-						lockout_armed = tokens[9] == '1'
-						self.limit_state_received.emit(switch_open,switch_closed)
+						mev_switch_open = tokens[1] == "1"
+						mev_switch_closed = tokens[2] == "1"
+						vent_switch_open = tokens[3] == "1"
+						vent_switch_closed = tokens[4] == "1"
+						encoder_val = int(tokens[5])
+						ignitor_on = tokens[6] == "1"
+						default_velocity = float(tokens[7])
+						current_velocity = float(tokens[8])
+						nc_valve_open = tokens[9] == '1'
+						lockout_armed = tokens[10] == '1'
+
+						self.limit_state_received.emit(mev_switch_open,mev_switch_closed,vent_switch_open,vent_switch_closed)
 						self.ignitor_state_received.emit(ignitor_on)
 						self.encoder_position_received.emit(encoder_val)
 						self.default_velocity_received.emit(default_velocity)
 						self.current_velocity_received.emit(current_velocity)
-						self.vent_valve_state_received.emit(vent_valve_open)
 						self.nc_valve_state_received.emit(nc_valve_open)
 						self.lockout_state_received.emit(lockout_armed)
 
@@ -126,15 +126,15 @@ class App(QMainWindow):
 
 		#ip address
 		self.ip_box = QLineEdit(self.server_connect_group)
-		self.ip_box.move(180, 30)
-		self.ip_box.resize(170,30)
+		self.ip_box.move(185, 30)
+		self.ip_box.resize(165,30)
 		self.ip_box.setPlaceholderText("IP address")
 		self.ip_box.setText("10.42.0.209")
 		#----accompanying label
 		self.ip_label = QLabel(self.server_connect_group)
 		self.ip_label.setText("IP Address")
 		self.ip_label.move(10,30)
-		#self.ip_label.resize(230,30)
+		self.ip_label.resize(170,30)
 
 		#connect button
 		self.connect_button = QPushButton('Connect', self.server_connect_group)
@@ -169,7 +169,7 @@ class App(QMainWindow):
 		self.launch_label = QLabel(self.ignition_sequence_group)
 		self.launch_label.setText("Launch code")
 		self.launch_label.move(10,30)
-		#self.launch_label.resize(230,30)
+		self.launch_label.resize(170,30)
 
 		#Burn duration
 		self.burn_duration_box = QLineEdit(self.ignition_sequence_group)
@@ -183,7 +183,7 @@ class App(QMainWindow):
 		self.burn_label = QLabel(self.ignition_sequence_group)
 		self.burn_label.setText("Burn duration (s)")
 		self.burn_label.move(10,80)
-		#self.burn_label.resize(230,30)
+		self.burn_label.resize(170,30)
 
 		#Ignitor timing
 		self.ignitor_timing_box = QLineEdit(self.ignition_sequence_group)
@@ -196,7 +196,7 @@ class App(QMainWindow):
 		self.ignitor_button_label = QLabel(self.ignition_sequence_group)
 		self.ignitor_button_label.setText("Ignitor delay (s)")
 		self.ignitor_button_label.move(10,130)
-		#self.ignitor_button_label.resize(230,30)
+		self.ignitor_button_label.resize(170,30)
 
 		#Valve open timing
 		self.valve_open_timing_box = QLineEdit(self.ignition_sequence_group)
@@ -209,7 +209,7 @@ class App(QMainWindow):
 		self.valve_open_label = QLabel(self.ignition_sequence_group)
 		self.valve_open_label.setText("Valve opening (s)")
 		self.valve_open_label.move(10,180)
-		#self.valve_open_label.resize(230,30)
+		self.valve_open_label.resize(170,30)
 
 		#Valve closing time
 		self.valve_closing_time_box = QLineEdit(self.ignition_sequence_group)
@@ -222,7 +222,7 @@ class App(QMainWindow):
 		self.valve_close_label = QLabel(self.ignition_sequence_group)
 		self.valve_close_label.setText("Valve closing (s)")
 		self.valve_close_label.move(10,230)
-		#self.valve_close_label.resize(230,30)
+		self.valve_close_label.resize(170,30)
 
 		#start ignition sequence button
 		self.auto_test_button = QPushButton('Start sequence', self.ignition_sequence_group)
@@ -238,23 +238,47 @@ class App(QMainWindow):
 		self.server_status_group.resize(380, 620)
 		self.server_status_group.setTitle("System status")
 
-		#Close limit switch indicator
-		self.mev_close_limit_indicator_label = QLabel(self.server_status_group)
-		self.mev_close_limit_indicator_label.setText("Close limit switch")
-		self.mev_close_limit_indicator_label.move(10,30)
-		self.mev_close_limit_indicator = QPushButton(self.server_status_group)
-		self.mev_close_limit_indicator.move(200,30)
-		self.mev_close_limit_indicator.resize(170,30)
-		self.mev_close_limit_indicator.setEnabled(False)
+		#Limit indicator labels
+		self.open_label = QLabel(self.server_status_group)
+		self.open_label.setText("Close limit")
+		self.open_label.move(300,40)
+		self.open_label.resize(170,30)
+		self.close_label = QLabel(self.server_status_group)
+		self.close_label.setText("Open limit")
+		self.close_label.move(200,40)
+		self.close_label.resize(170,30)
 
+		#Mev limit switches
+		self.mev_limit_indicator_label = QLabel(self.server_status_group)
+		self.mev_limit_indicator_label.setText("MEV limit switches")
+		self.mev_limit_indicator_label.move(10,80)
+		self.mev_limit_indicator_label.resize(170,30)
+		#Close limit switch indicator
+		self.mev_close_limit_indicator = QPushButton(self.server_status_group)
+		self.mev_close_limit_indicator.move(200,80)
+		self.mev_close_limit_indicator.resize(70,30)
+		self.mev_close_limit_indicator.setEnabled(False)
 		#Open limit switch indicator
-		self.mev_open_limit_indicator_label = QLabel(self.server_status_group)
-		self.mev_open_limit_indicator_label.setText("Open limit switch")
-		self.mev_open_limit_indicator_label.move(10,80)
 		self.mev_open_limit_indicator = QPushButton(self.server_status_group)
-		self.mev_open_limit_indicator.move(200,80)
-		self.mev_open_limit_indicator.resize(170,30)
+		self.mev_open_limit_indicator.move(300,80)
+		self.mev_open_limit_indicator.resize(70,30)
 		self.mev_open_limit_indicator.setEnabled(False)
+
+		#Vent valve limit switches
+		self.vent_limit_indicator_label = QLabel(self.server_status_group)
+		self.vent_limit_indicator_label.setText("Vent limit switches")
+		self.vent_limit_indicator_label.move(10,130)
+		self.vent_limit_indicator_label.resize(170,30)
+		#Close limit switch indicator
+		self.vent_close_limit_indicator = QPushButton(self.server_status_group)
+		self.vent_close_limit_indicator.move(200,130)
+		self.vent_close_limit_indicator.resize(70,30)
+		self.vent_close_limit_indicator.setEnabled(False)
+		#Open limit switch indicator
+		self.vent_open_limit_indicator = QPushButton(self.server_status_group)
+		self.vent_open_limit_indicator.move(300,130)
+		self.vent_open_limit_indicator.resize(70,30)
+		self.vent_open_limit_indicator.setEnabled(False)
 
 		#ignitor indicator
 		self.ignitor_button_indicator = QPushButton(self.server_status_group)
@@ -264,17 +288,8 @@ class App(QMainWindow):
 		self.ignitor_button_indicator_label = QLabel(self.server_status_group)
 		self.ignitor_button_indicator_label.setText("Ignitor relay")
 		self.ignitor_button_indicator_label.move(10,230)
+		self.ignitor_button_indicator_label.resize(170,30)
 
-		#vent valve indicator
-		self.vent_valve_button_indicator = QPushButton(self.server_status_group)
-		self.vent_valve_button_indicator.move(200,130)
-		self.vent_valve_button_indicator.resize(170,30)
-		self.vent_valve_button_indicator.setEnabled(False)
-		self.vent_valve_button_indicator_label = QLabel(self.server_status_group)
-		self.vent_valve_button_indicator_label.setText("Vent valve relay")
-		self.vent_valve_button_indicator_label.move(10,130)
-		self.vent_valve_button_indicator_label.resize(170,30)
-		
 		#nc valve indicator
 		self.nc_valve_button_indicator = QPushButton(self.server_status_group)
 		self.nc_valve_button_indicator.move(200,180)
@@ -283,6 +298,7 @@ class App(QMainWindow):
 		self.nc_valve_button_indicator_label = QLabel(self.server_status_group)
 		self.nc_valve_button_indicator_label.setText("NC valve relay")
 		self.nc_valve_button_indicator_label.move(10,180)
+		self.nc_valve_button_indicator_label.resize(170,30)
 
 		#lockout box indicator
 		self.lockout_button_indicator = QPushButton(self.server_status_group)
@@ -292,6 +308,7 @@ class App(QMainWindow):
 		self.lockout_button_indicator_label = QLabel(self.server_status_group)
 		self.lockout_button_indicator_label.setText("System armed")
 		self.lockout_button_indicator_label.move(10,280)
+		self.lockout_button_indicator_label.resize(170,30)
 
 		#encoder position
 		self.encoder_position_label = QLabel(self.server_status_group)
@@ -371,7 +388,7 @@ class App(QMainWindow):
 		#TEST IGNITOR button
 		self.ignitor_button = QPushButton('Toggle\n Ignitor', self.manual_control_group)
 		self.ignitor_button.resize(100,40)
-		self.ignitor_button.move(230,30)
+		self.ignitor_button.move(120,30)
 		self.ignitor_button.clicked.connect(self.send_toggle_ignitor)
 		self.ignitor_button.setEnabled(False)
 
@@ -389,12 +406,18 @@ class App(QMainWindow):
 		self.mev_close_button.clicked.connect(self.send_mev_close)
 		self.mev_close_button.setEnabled(False)
 
-		#TEST Vent valve button
-		self.vent_valve_button = QPushButton('Toggle\n Vent Valve', self.manual_control_group)
-		self.vent_valve_button.resize(100,40)
-		self.vent_valve_button.move(120,30)
-		self.vent_valve_button.clicked.connect(self.send_toggle_vent_valve)
-		self.vent_valve_button.setEnabled(False)
+		#TEST Open vent button
+		self.vent_valve_open_button = QPushButton('Open Vent', self.manual_control_group)
+		self.vent_valve_open_button.resize(100,40)
+		self.vent_valve_open_button.move(230,30)
+		self.vent_valve_open_button.clicked.connect(self.send_vent_open)
+		self.vent_valve_open_button.setEnabled(False)
+		#TEST Close vent button
+		self.vent_valve_close_button = QPushButton('Close Vent', self.manual_control_group)
+		self.vent_valve_close_button.resize(100,40)
+		self.vent_valve_close_button.move(230,80)
+		self.vent_valve_close_button.clicked.connect(self.send_vent_close)
+		self.vent_valve_close_button.setEnabled(False)
 
 		#TEST NC valve button
 		self.nc_valve_button = QPushButton('Toggle\n NC Valve', self.manual_control_group)
@@ -450,7 +473,7 @@ class App(QMainWindow):
 			self.mev_open_button.setEnabled(True)
 			self.mev_close_button.setEnabled(True)
 			self.nc_valve_button.setEnabled(True)
-			self.vent_valve_button.setEnabled(True)
+			self.vent_valve_open_button.setEnabled(True)
 			self.set_default_vel_button.setEnabled(True)
 			
 			self.ip_box.setEnabled(False)
@@ -467,13 +490,16 @@ class App(QMainWindow):
 			self.status_box.appendPlainText("Connection failure:" + str(e))
 
 	def on_status_timer(self):
-		self.status_delay.setText(str(self.elapsed_timer.elapsed()).zfill(3))
+		elapsed_time = self.elapsed_timer.elapsed()
+		self.status_delay.setText(str(elapsed).zfill(3))
+		if (elapsed_time > 100):
+			self.status_delay.setStyleSheet("background-color: red")
 		if self.mev_fully_open:
 			self.mev_open_time.setText(str(self.mev_open_timer.elapsed()).zfill(3))
 		
 	#submit data to the  server
 	def send_auto_test_params(self):
-				#Collecting all of the variables from the textboxes
+		#Collecting all of the variables from the textboxes
 		launch_code = self.launch_code_box.text()
 		burn_duration = self.burn_duration_box.text()
 		ignitor_timing = self.ignitor_timing_box.text()
@@ -498,9 +524,6 @@ class App(QMainWindow):
 	#abort
 	def send_abort(self):
 		self.send_to_server("ABORT")
-
-	def send_toggle_vent_valve(self):
-		self.send_to_server("VENT_VALVE")
 		
 	def send_toggle_nc_valve(self):
 		self.send_to_server("NC_VALVE")
@@ -518,20 +541,26 @@ class App(QMainWindow):
 	def send_mev_open(self):
 		self.send_to_server("MEV OPEN")
 
-	#ignition
-	def send_toggle_ignitor(self):
-		self.send_to_server("IGNITOR")
-
 	#valve closing
 	def send_mev_close(self):
 		self.send_to_server("MEV CLOSE")
 
+	def send_vent_open(self):
+		self.send_to_server("VENT OPEN")
+
+	def send_vent_close(self):
+		self.send_to_server("VENT CLOSE")
+
+	#ignition
+	def send_toggle_ignitor(self):
+		self.send_to_server("IGNITOR")
+
 	def on_msg_received(self, msg):
 		self.status_box.appendPlainText(msg)
 
-	def on_limit_state_received(self, switch_open, switch_closed):
+	def on_limit_state_received(self, mev_switch_open, mev_switch_closed, vent_switch_open, vent_switch_closed):
 		self.elapsed_timer.restart()
-		if switch_open:
+		if mev_switch_open:
 			self.mev_open_limit_indicator.setText("FULLY OPEN")
 			self.mev_open_limit_indicator.setStyleSheet("background-color: red")
 			if not self.mev_fully_open:
@@ -540,13 +569,27 @@ class App(QMainWindow):
 		else:
 			self.mev_open_limit_indicator.setText("")
 			self.mev_open_limit_indicator.setStyleSheet("background-color: white")
-		if switch_closed:
+		if mev_switch_closed:
 			self.mev_close_limit_indicator.setText("FULLY CLOSED")
 			self.mev_close_limit_indicator.setStyleSheet("background-color: green")
 			self.mev_fully_open = False
 		else:
 			self.mev_close_limit_indicator.setText("")
 			self.mev_close_limit_indicator.setStyleSheet("background-color: white")
+
+		if vent_switch_open:
+			self.vent_open_limit_indicator.setText("FULLY OPEN")
+			self.vent_open_limit_indicator.setStyleSheet("background-color: red")
+		else:
+			self.vent_open_limit_indicator.setText("")
+			self.vent_open_limit_indicator.setStyleSheet("background-color: white")
+		if vent_switch_closed:
+			self.vent_close_limit_indicator.setText("FULLY CLOSED")
+			self.vent_close_limit_indicator.setStyleSheet("background-color: green")
+		else:
+			self.vent_close_limit_indicator.setText("")
+			self.vent_close_limit_indicator.setStyleSheet("background-color: white")
+
 
 	def on_encoder_position_received(self, value):
 		self.encoder_position.setText('{:.1f}'.format(value * _DEGREES_PER_ENCODER_COUNT))
@@ -558,15 +601,7 @@ class App(QMainWindow):
 		else:
 			self.ignitor_button_indicator.setText("OFF")
 			self.ignitor_button_indicator.setStyleSheet("background-color: white")
-
-	def on_vent_valve_state_received(self, active):
-		if active:
-			self.vent_valve_button_indicator.setText("ON")
-			self.vent_valve_button_indicator.setStyleSheet("background-color: red")
-		else:
-			self.vent_valve_button_indicator.setText("OFF")
-			self.vent_valve_button_indicator.setStyleSheet("background-color: white")
-
+	
 	def on_nc_valve_state_received(self, active):
 		if active:
 			self.nc_valve_button_indicator.setText("ON")
@@ -596,11 +631,14 @@ class App(QMainWindow):
 		self.mev_open_limit_indicator.setText(msg)
 		self.mev_open_limit_indicator.setStyleSheet(color)
 
+		self.vent_close_limit_indicator.setText(msg)
+		self.vent_close_limit_indicator.setStyleSheet(color)
+
+		self.vent_open_limit_indicator.setText(msg)
+		self.vent_open_limit_indicator.setStyleSheet(color)
+
 		self.ignitor_button_indicator.setText(msg)
 		self.ignitor_button_indicator.setStyleSheet(color)
-
-		self.vent_valve_button_indicator.setText(msg)
-		self.vent_valve_button_indicator.setStyleSheet(color)
 
 		self.nc_valve_button_indicator.setText(msg)
 		self.nc_valve_button_indicator.setStyleSheet(color)
@@ -636,7 +674,7 @@ class App(QMainWindow):
 		self.mev_close_button.setEnabled(False)
 		self.auto_test_button.setEnabled(False)
 		self.nc_valve_button.setEnabled(False)
-		self.vent_valve_button.setEnabled(False)
+		self.vent_valve_open_button.setEnabled(False)
 		self.set_default_vel_button.setEnabled(False)
 
 		self.receiver = None
