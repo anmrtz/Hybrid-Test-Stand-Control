@@ -10,12 +10,13 @@ from PyQt5.QtCore import *
 from PyQt5 import *
 
 _DEGREES_PER_ENCODER_COUNT = 90.0 / 300.0
+_AUTO_TEST_ENABLED = False
 
 class ReceiveThread(QtCore.QThread):
 
 	conn_lost = QtCore.pyqtSignal(object)
 	msg_received = QtCore.pyqtSignal(object)
-	limit_state_received = QtCore.pyqtSignal(int, int)
+	limit_state_received = QtCore.pyqtSignal(int, int, int, int)
 	ignitor_state_received = QtCore.pyqtSignal(int)
 	encoder_position_received = QtCore.pyqtSignal(int)
 	default_velocity_received = QtCore.pyqtSignal(float)
@@ -135,6 +136,12 @@ class App(QMainWindow):
 		self.ip_label.setText("IP Address")
 		self.ip_label.move(10,30)
 		self.ip_label.resize(170,30)
+
+		#about button
+		self.about_button = QPushButton('About', self)
+		self.about_button.resize(60,30)
+		self.about_button.move(1130, 15)
+		self.about_button.clicked.connect(self.display_about)
 
 		#connect button
 		self.connect_button = QPushButton('Connect', self.server_connect_group)
@@ -461,19 +468,20 @@ class App(QMainWindow):
 				self.receiver.default_velocity_received.connect(self.on_default_velocity_received)
 				self.receiver.current_velocity_received.connect(self.on_current_velocity_received)
 				self.receiver.conn_lost.connect(self.on_conn_lost)
-				self.receiver.vent_valve_state_received.connect(self.on_vent_valve_state_received)
 				self.receiver.nc_valve_state_received.connect(self.on_nc_valve_state_received)
 				self.receiver.lockout_state_received.connect(self.on_lockout_state_received)
 				self.receiver.start()
 
 			self.connect_button.setEnabled(False)
-			self.auto_test_button.setEnabled(True)
+			if _AUTO_TEST_ENABLED:
+				self.auto_test_button.setEnabled(True)
 			self.ignitor_button.setEnabled(True)
 			self.abort_button.setEnabled(True)
 			self.mev_open_button.setEnabled(True)
 			self.mev_close_button.setEnabled(True)
 			self.nc_valve_button.setEnabled(True)
 			self.vent_valve_open_button.setEnabled(True)
+			self.vent_valve_close_button.setEnabled(True)
 			self.set_default_vel_button.setEnabled(True)
 			
 			self.ip_box.setEnabled(False)
@@ -491,9 +499,11 @@ class App(QMainWindow):
 
 	def on_status_timer(self):
 		elapsed_time = self.elapsed_timer.elapsed()
-		self.status_delay.setText(str(elapsed).zfill(3))
+		self.status_delay.setText(str(elapsed_time).zfill(3))
 		if (elapsed_time > 100):
 			self.status_delay.setStyleSheet("background-color: red")
+		else:
+			self.status_delay.setStyleSheet("background-color: white")
 		if self.mev_fully_open:
 			self.mev_open_time.setText(str(self.mev_open_timer.elapsed()).zfill(3))
 		
@@ -539,17 +549,17 @@ class App(QMainWindow):
 
 	#open valve
 	def send_mev_open(self):
-		self.send_to_server("MEV OPEN")
+		self.send_to_server("MEV_OPEN")
 
 	#valve closing
 	def send_mev_close(self):
-		self.send_to_server("MEV CLOSE")
+		self.send_to_server("MEV_CLOSE")
 
 	def send_vent_open(self):
-		self.send_to_server("VENT OPEN")
+		self.send_to_server("VENT_OPEN")
 
 	def send_vent_close(self):
-		self.send_to_server("VENT CLOSE")
+		self.send_to_server("VENT_CLOSE")
 
 	#ignition
 	def send_toggle_ignitor(self):
@@ -561,7 +571,7 @@ class App(QMainWindow):
 	def on_limit_state_received(self, mev_switch_open, mev_switch_closed, vent_switch_open, vent_switch_closed):
 		self.elapsed_timer.restart()
 		if mev_switch_open:
-			self.mev_open_limit_indicator.setText("FULLY OPEN")
+			self.mev_open_limit_indicator.setText("F. OPEN")
 			self.mev_open_limit_indicator.setStyleSheet("background-color: red")
 			if not self.mev_fully_open:
 				self.mev_open_timer.restart()
@@ -570,7 +580,7 @@ class App(QMainWindow):
 			self.mev_open_limit_indicator.setText("")
 			self.mev_open_limit_indicator.setStyleSheet("background-color: white")
 		if mev_switch_closed:
-			self.mev_close_limit_indicator.setText("FULLY CLOSED")
+			self.mev_close_limit_indicator.setText("F. CLOSED")
 			self.mev_close_limit_indicator.setStyleSheet("background-color: green")
 			self.mev_fully_open = False
 		else:
@@ -578,13 +588,13 @@ class App(QMainWindow):
 			self.mev_close_limit_indicator.setStyleSheet("background-color: white")
 
 		if vent_switch_open:
-			self.vent_open_limit_indicator.setText("FULLY OPEN")
+			self.vent_open_limit_indicator.setText("F. OPEN")
 			self.vent_open_limit_indicator.setStyleSheet("background-color: red")
 		else:
 			self.vent_open_limit_indicator.setText("")
 			self.vent_open_limit_indicator.setStyleSheet("background-color: white")
 		if vent_switch_closed:
-			self.vent_close_limit_indicator.setText("FULLY CLOSED")
+			self.vent_close_limit_indicator.setText("F. CLOSED")
 			self.vent_close_limit_indicator.setStyleSheet("background-color: green")
 		else:
 			self.vent_close_limit_indicator.setText("")
@@ -654,6 +664,10 @@ class App(QMainWindow):
 			except Exception as e:
 				print("Send to server failed: " + str(e))
 
+	def display_about(self):
+		QMessageBox.about(self, "About", "Hybrid Test Stand Control\n\nWritten for UVic Rocketry\n\n" \
+			"Contributors:\n\nAndres Martinez\nAnar Kazimov\nAlexander Schell\n\nLGPL Version 3")
+	
 	def on_conn_lost(self, msg = ""):
 		self.status_box.appendPlainText(msg)
 		self.set_all_indicator_buttons("Unknown", "background-color: gray")
@@ -675,6 +689,7 @@ class App(QMainWindow):
 		self.auto_test_button.setEnabled(False)
 		self.nc_valve_button.setEnabled(False)
 		self.vent_valve_open_button.setEnabled(False)
+		self.vent_valve_close_button.setEnabled(False)
 		self.set_default_vel_button.setEnabled(False)
 
 		self.receiver = None

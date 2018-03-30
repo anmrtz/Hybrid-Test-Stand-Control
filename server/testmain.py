@@ -71,8 +71,6 @@ class TestMain:
 
 		if self.valveControl is None:
 			self.valveControl = ValveControl()
-			self.valveControl.initStepper()
-			self.valveControl.initEncoder()
 
 		# spawn a new thread to periodically check the connection with the new client
 		checkStatusThread = threading.Thread(target = self.checkStatus, args = ())
@@ -115,18 +113,21 @@ class TestMain:
 		if params[0] == "AUTO_TEST_PARAMS" and len(params) > 1:
 			self.sendMsgToClient("Initializing automated test...")
 			self.startAutoTest(params[1:])
-		elif params[0] == "MEV" and len(params) == 2 and params[1] == "OPEN":
-			self.sendMsgToClient("Manually opening valve to limit switch...")
-			self.valveControl.moveValveToOpenLimit()
-		elif params[0] == "MEV" and len(params) == 2 and params[1] == "CLOSE":
-			self.sendMsgToClient("Manually closing valve to limit switch...")
-			self.valveControl.moveValveToCloseLimit()
+		elif params[0] == "MEV_OPEN":
+			self.sendMsgToClient("Manually opening MEV to limit switch...")
+			self.valveControl.moveMEVToOpenLimit()
+		elif params[0] == "MEV_CLOSE":
+			self.sendMsgToClient("Manually closing MEV to limit switch...")
+			self.valveControl.moveMEVToCloseLimit()
+		elif params[0] == "VENT_OPEN":
+			self.sendMsgToClient("Manually opening vent valve to limit switch...")
+			self.valveControl.moveVentToOpenLimit()
+		elif params[0] == "VENT_CLOSE":
+			self.sendMsgToClient("Manually closing vent valve to limit switch...")
+			self.valveControl.moveVentToCloseLimit()
 		elif params[0] == "IGNITOR":
 			self.sendMsgToClient("Toggling ignitor...")
 			self.valveControl.setIgnitor(not self.valveControl.ignitorActive())
-		elif params[0] == "VENT_VALVE":
-			self.sendMsgToClient("Toggling vent valve...")
-			self.valveControl.setVentValve(not self.valveControl.ventValveActive())
 		elif params[0] == "NC_VALVE":
 			self.sendMsgToClient("Toggling NC valve...")
 			self.valveControl.setNCValve(not self.valveControl.NCValveActive())
@@ -137,7 +138,7 @@ class TestMain:
 				self.sendMsgToClient("Set default velocity error: invalid integer parameter")
 				return
 			self.sendMsgToClient("Setting default velocity to " + params[1] + " deg/s...")
-			set_result = self.valveControl.setDefaultVelocity(new_default_vel)
+			set_result = self.valveControl.setMEVDefaultVelocity(new_default_vel)
 			self.sendMsgToClient(set_result)
 		elif params[0] == "CALIBRATE_ENCODER":
 			self.sendMsgToClient("Calibrating encoder...")	
@@ -174,19 +175,18 @@ class TestMain:
 				break
 
 			# send status information back to client
-			if self.valveControl is not None:
-				#limit_switch_msg = "LIMIT " + str(int(self.valveControl.openLimitHit())) + " " + str(int(self.valveControl.closeLimitHit()))
-				#self.sendMsgToClient(limit_switch_msg)
-				#encoder_position_msg = "ENCODER " + str(int(self.valveControl.motorPos))
-				#self.sendMsgToClient(encoder_position_msg)
-				#ignitor_state_msg = "IGNITOR 0"
-				#self.sendMsgToClient(ignitor_state_msg)
-				
+			if self.valveControl is not None:			
 				try:
-					state_msg = "STATEALL " + str(int(self.valveControl.openLimitHit())) + " " + str(int(self.valveControl.closeLimitHit())) + " " + \
-						str(int(self.valveControl.encoder.getPosition())) + " " + str(int(self.valveControl.ignitorActive())) + " " + \
-						str(float(self.valveControl.defaultVelocity)) + " " + str(float(self.valveControl.stepper.getVelocity())) + " " + \
-						str(int(self.valveControl.ventValveActive())) + " " + str(int(self.valveControl.NCValveActive())) + " " + \
+					state_msg = "STATEALL " + \
+						str(int(self.valveControl.MEVOpenLimitHit())) + " " + \
+						str(int(self.valveControl.MEVCloseLimitHit())) + " " + \
+						str(int(self.valveControl.VentOpenLimitHit())) + " " + \
+						str(int(self.valveControl.VentCloseLimitHit())) + " " + \
+						str(int(self.valveControl.encoder.getPosition())) + " " + \
+						str(int(self.valveControl.ignitorActive())) + " " + \
+						str(float(self.valveControl.MEVStepper.defaultVelocity)) + " " + \
+						str(float(self.valveControl.MEVStepper.stepper.getVelocity())) + " " + \
+						str(int(self.valveControl.NCValveActive())) + " " + \
 						str(int(self.valveControl.lockoutArmed()))
 				except Exception as e:
 					print("Status send error: " + str(e))
@@ -240,16 +240,15 @@ class TestMain:
 			self.sendMsgToClient("ERROR! Cannot start auto test: " + str(e))
 			return
 		
-		self.valveControl.moveValveToCloseLimit()
+		self.valveControl.moveMEVValveToCloseLimit()
 		self.valveControl.calibratePosition()
-		#self.sendMsgToClient("Moving to buffer angle")
-		#self.valveControl.moveToAngle(60,200)
+		
 		try:
 			open_velocity = 90.0 / valve_opening_time
 			close_velocity = 90.0 / valve_closing_time
-			if (open_velocity > ValveControl._MAX_SPEED or open_velocity <= 0.0):
+			if (open_velocity > self.valveControl.MEVStepper.maxVelocity or open_velocity <= 0.0):
 				raise Exception('Specified valve open time results in out of range speed!')
-			if (close_velocity > ValveControl._MAX_SPEED or close_velocity <= 0.0):
+			if (close_velocity > self.valveControl.MEVStepper.maxVelocity or close_velocity <= 0.0):
 				raise Exception('Specified valve close time results in out of range speed!')
 			if (burn_duration < 0.0):
 				raise Exception('Invalid burn duration time!')
@@ -257,20 +256,20 @@ class TestMain:
 				raise Exception('Invalid burn delay!')
 		except Exception as e:
 			self.sendMsgToClient("Auto test error:" + str(e))
-			self.valveControl.moveValveToCloseLimit()
+			self.valveControl.moveMEVValveToCloseLimit()
 			return
 
-		self.sendMsgToClient("Activating ignitor and waiting for " + str(ignitor_delay) + " seconds")
-		self.valveControl.setIgnitor(True)
-		time.sleep(ignitor_delay)
-		self.sendMsgToClient("Moving to open position")
-		self.valveControl.moveToAngle(90,open_velocity)
-		self.sendMsgToClient("Burning for " + str(burn_duration) + " seconds")
-		time.sleep(burn_duration)
-		self.sendMsgToClient("Closing valve")
+		#self.sendMsgToClient("Activating ignitor and waiting for " + str(ignitor_delay) + " seconds")
+		#self.valveControl.setIgnitor(True)
+		#time.sleep(ignitor_delay)
+		#self.sendMsgToClient("Moving to open position")
+		#self.valveControl.moveMEVToAngle(90,open_velocity)
+		#self.sendMsgToClient("Burning for " + str(burn_duration) + " seconds")
+		#time.sleep(burn_duration)
+		#self.sendMsgToClient("Closing valve")
 		#self.valveControl.moveValveToCloseLimit()
-		self.valveControl.moveToAngle(0,close_velocity)
-		self.valveControl.setIgnitor(False)
+		#self.valveControl.moveMEVToAngle(0,close_velocity)
+		#self.valveControl.setIgnitor(False)
 		
 		self.sendMsgToClient("Auto test ended")
 
