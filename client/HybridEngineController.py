@@ -247,11 +247,11 @@ class App(QMainWindow):
 
 		#Limit indicator labels
 		self.open_label = QLabel(self.server_status_group)
-		self.open_label.setText("Close limit")
+		self.open_label.setText("Open limit")
 		self.open_label.move(300,40)
 		self.open_label.resize(170,30)
 		self.close_label = QLabel(self.server_status_group)
-		self.close_label.setText("Open limit")
+		self.close_label.setText("Close limit")
 		self.close_label.move(200,40)
 		self.close_label.resize(170,30)
 
